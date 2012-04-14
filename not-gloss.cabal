@@ -1,0 +1,25 @@
+name:                not-gloss
+version:             0.1.0.0
+synopsis:            Painless 3d graphics, no affiliation with gloss
+-- description:         
+license:             BSD3
+license-file:        LICENSE
+author:              Greg Horn
+maintainer:          gregmainland@gmail.com
+-- copyright:           
+category:            Graphics
+build-type:          Simple
+cabal-version:       >=1.8
+
+library
+  exposed-modules:     Vis,
+                       Vis.Xyz,
+                       Vis.Quat
+
+  other-modules:       Vis.Camera
+
+  build-depends:       base == 4.5.*,
+                       GLUT == 2.3.*,
+                       time == 1.4.*
+
+  ghc-options:         -threaded
