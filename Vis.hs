@@ -11,7 +11,7 @@ module Vis ( vis
            ) where
 
 import Data.IORef ( newIORef )
-import System.Exit ( exitWith, ExitCode(ExitSuccess) )
+import System.Exit ( exitSuccess )
 import Graphics.UI.GLUT
 import Data.Time.Clock
 import Control.Concurrent
@@ -63,34 +63,33 @@ myGlInit progName = do
 
 
 drawObjects :: [VisObject GLdouble] -> IO ()
-drawObjects objects = do
-  mapM_ drawObject objects
+drawObjects = mapM_ drawObject
   where
     drawObject :: VisObject GLdouble -> IO ()
     -- cylinder
-    drawObject (VisCylinder (height,radius) (Xyz x y z) (Quat q0 q1 q2 q3) col) = do
+    drawObject (VisCylinder (height,radius) (Xyz x y z) (Quat q0 q1 q2 q3) col) =
       preservingMatrix $ do
         setMaterialDiffuse col 1
         setColor col
         translate (Vector3 x y z :: Vector3 GLdouble)
-        rotate (2*acos(q0)*180/pi :: GLdouble) (Vector3 q1 q2 q3)
+        rotate (2 * acos q0 *180/pi :: GLdouble) (Vector3 q1 q2 q3)
         translate (Vector3 0 0 (-height/2) :: Vector3 GLdouble)
         renderObject Solid (Cylinder' radius height 10 10)
 
     -- box
-    drawObject (VisBox (dx,dy,dz) (Xyz x y z) (Quat q0 q1 q2 q3) col) = do
+    drawObject (VisBox (dx,dy,dz) (Xyz x y z) (Quat q0 q1 q2 q3) col) =
       preservingMatrix $ do
         setMaterialDiffuse col 0.1
         setColor col
         translate (Vector3 x y z :: Vector3 GLdouble)
-        rotate (2*acos(q0)*180/pi :: GLdouble) (Vector3 q1 q2 q3)
+        rotate (2 * acos q0 *180/pi :: GLdouble) (Vector3 q1 q2 q3)
         normalize $= Enabled
         scale dx dy dz
         renderObject Solid (Cube 1)
         normalize $= Disabled
 
     -- line
-    drawObject (VisLine path (Rgb r g b)) = do
+    drawObject (VisLine path (Rgb r g b)) =
       preservingMatrix $ do
         lighting $= Disabled
         color (Color3 r g b :: Color3 GLfloat)
@@ -98,7 +97,7 @@ drawObjects objects = do
         lighting $= Enabled
 
     -- arrow
-    drawObject (VisArrow (size, aspectRatio) (Xyz x0 y0 z0) (Xyz x y z) (Rgb r g b)) = do
+    drawObject (VisArrow (size, aspectRatio) (Xyz x0 y0 z0) (Xyz x y z) (Rgb r g b)) =
       preservingMatrix $ do
         let numSlices = 8
             numStacks = 15
@@ -121,17 +120,16 @@ drawObjects objects = do
         translate (Vector3 0 0 cylinderHeight :: Vector3 GLdouble)
         renderObject Solid (Cone coneRadius coneHeight numSlices numStacks)
 
-    drawObject (VisAxes (size, aspectRatio) (Xyz x0 y0 z0) (Quat q0 q1 q2 q3)) = do
-      preservingMatrix $ do
-        translate (Vector3 x0 y0 z0 :: Vector3 GLdouble)
-        rotate (2*acos(q0)*180/pi :: GLdouble) (Vector3 q1 q2 q3)
+    drawObject (VisAxes (size, aspectRatio) (Xyz x0 y0 z0) (Quat q0 q1 q2 q3)) = preservingMatrix $ do
+      translate (Vector3 x0 y0 z0 :: Vector3 GLdouble)
+      rotate (2 * acos q0 *180/pi :: GLdouble) (Vector3 q1 q2 q3)
         
-        let xAxis = VisArrow (size, aspectRatio) (Xyz 0 0 0) (Xyz 1 0 0) (Rgb 1 0 0)
-            yAxis = VisArrow (size, aspectRatio) (Xyz 0 0 0) (Xyz 0 1 0) (Rgb 0 1 0)
-            zAxis = VisArrow (size, aspectRatio) (Xyz 0 0 0) (Xyz 0 0 1) (Rgb 0 0 1)
-        drawObjects [xAxis, yAxis, zAxis]
+      let xAxis = VisArrow (size, aspectRatio) (Xyz 0 0 0) (Xyz 1 0 0) (Rgb 1 0 0)
+          yAxis = VisArrow (size, aspectRatio) (Xyz 0 0 0) (Xyz 0 1 0) (Rgb 0 1 0)
+          zAxis = VisArrow (size, aspectRatio) (Xyz 0 0 0) (Xyz 0 0 1) (Rgb 0 0 1)
+      drawObjects [xAxis, yAxis, zAxis]
 
-display :: MVar a -> MVar (Maybe SpecialKey) -> MVar Bool -> Camera -> ((Maybe SpecialKey) -> a -> IO ()) -> DisplayCallback
+display :: MVar a -> MVar (Maybe SpecialKey) -> MVar Bool -> Camera -> (Maybe SpecialKey -> a -> IO ()) -> DisplayCallback
 display stateMVar keyRef visReadyMVar camera userDrawFun = do
    clear [ ColorBuffer, DepthBuffer ]
    
@@ -177,34 +175,31 @@ reshape size@(Size w h) = do
 
 
 keyboardMouse :: Camera -> MVar (Maybe SpecialKey) -> KeyboardMouseCallback
-keyboardMouse camera keyRef key keyState _ _ = do
+keyboardMouse camera keyRef key keyState _ _ =
   case (key, keyState) of
     -- kill sim thread when main loop finishes
-    (Char '\27', Down) -> do
-      exitWith ExitSuccess
+    (Char '\27', Down) -> exitSuccess
 
     -- set keyRef
     (SpecialKey k, Down)   -> do
       _ <- swapMVar keyRef (Just k)
       return ()
     (SpecialKey _, Up)   -> do
-      _ <- swapMVar keyRef (Nothing)
+      _ <- swapMVar keyRef Nothing
       return ()
 
     -- adjust camera
     (MouseButton LeftButton, Down) -> do 
       resetMotion
       leftButton camera $= 1
-    (MouseButton LeftButton, Up) -> do 
-      leftButton camera $= 0
+    (MouseButton LeftButton, Up) -> leftButton camera $= 0
     (MouseButton RightButton, Down) -> do 
       resetMotion
       rightButton camera $= 1
-    (MouseButton RightButton, Up) -> do 
-      rightButton camera $= 0
+    (MouseButton RightButton, Up) -> rightButton camera $= 0
       
-    (MouseButton WheelUp, Down) -> do zoom 0.9
-    (MouseButton WheelDown, Down) -> do zoom 1.1
+    (MouseButton WheelUp, Down) -> zoom 0.9
+    (MouseButton WheelDown, Down) -> zoom 1.1
     
     _ -> return ()
     where resetMotion = do
@@ -240,14 +235,13 @@ motion camera (Position x y) = do
        nextX0 = x0 + 0.003*rho'*( -sin(phi'*pi/180)*deltaX - cos(phi'*pi/180)*deltaY)
        nextY0 = y0 + 0.003*rho'*(  cos(phi'*pi/180)*deltaX - sin(phi'*pi/180)*deltaY)
        
-   if (lb == 1)
-     then do phi   camera $~ (+ deltaX)
-             theta camera $= nextTheta
-     else do return ()
-   if (rb == 1)
-     then do x0c camera $= nextX0
-             y0c camera $= nextY0
-     else do return ()
+   when (lb == 1) $ do
+     phi   camera $~ (+ deltaX)
+     theta camera $= nextTheta
+   
+   when (rb == 1) $ do
+     x0c camera $= nextX0
+     y0c camera $= nextY0
    
    ballX camera $= x
    ballY camera $= y
@@ -255,7 +249,7 @@ motion camera (Position x y) = do
    postRedisplay Nothing
 
 
-vis :: Camera0 -> ((Maybe SpecialKey) -> a -> IO a) -> ((Maybe SpecialKey) -> a -> [VisObject GLdouble]) -> a -> Double -> IO ()
+vis :: Camera0 -> (Maybe SpecialKey -> a -> IO a) -> (Maybe SpecialKey -> a -> [VisObject GLdouble]) -> a -> Double -> IO ()
 vis camera0 userSimFun userDrawFun x0 ts = do
   -- init glut/scene
   (progName, _args) <- getArgsAndInitialize
@@ -280,15 +274,14 @@ vis camera0 userSimFun userDrawFun x0 ts = do
   mainLoop
 
 
-simThread :: MVar a -> MVar Bool -> ((Maybe SpecialKey) -> a -> IO a) -> Double -> MVar (Maybe SpecialKey) -> IO ()
+simThread :: MVar a -> MVar Bool -> (Maybe SpecialKey -> a -> IO a) -> Double -> MVar (Maybe SpecialKey) -> IO ()
 simThread stateMVar visReadyMVar userSimFun ts keyRef = do
   let waitUntilDisplayIsReady :: IO ()
       waitUntilDisplayIsReady = do 
         visReady <- readMVar visReadyMVar
-        if not visReady
-          then do threadDelay 10000
-                  waitUntilDisplayIsReady
-          else do return ()
+        unless visReady $ do
+          threadDelay 10000
+          waitUntilDisplayIsReady
   
   waitUntilDisplayIsReady
   
@@ -312,13 +305,13 @@ simThread stateMVar visReadyMVar userSimFun ts keyRef = do
               latestKey <- readMVar keyRef
               userSimFun latestKey state
 
-        let putState state = do
-              swapMVar stateMVar state
+        let putState = swapMVar stateMVar
 
         nextState <- getNextState
-        _ <- nextState `seq` (putState nextState)
+        _ <- nextState `seq` putState nextState
 
         postRedisplay Nothing
-
-      else do -- need to sleep longer
-        threadDelay usRemaining
+       
+      -- need to sleep longer
+      else threadDelay usRemaining
+           

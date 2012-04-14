@@ -37,15 +37,15 @@ makeCamera camera0 = do
   ballY'  <- newIORef (-1)
   leftButton' <- newIORef 0
   rightButton' <- newIORef 0
-  return $ Camera { phi = phi',
-                    theta = theta',
-                    rho = rho',
-                    x0c = x0,
-                    y0c = y0,
-                    z0c = z0,
-                    ballX = ballX',
-                    ballY = ballY',
-                    leftButton = leftButton',
-                    rightButton = rightButton'
-                  }
+  return Camera { phi = phi'
+                , theta = theta'
+                , rho = rho'
+                , x0c = x0
+                , y0c = y0
+                , z0c = z0
+                , ballX = ballX'
+                , ballY = ballY'
+                , leftButton = leftButton'
+                , rightButton = rightButton'
+                }
 
