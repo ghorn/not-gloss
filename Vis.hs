@@ -16,24 +16,29 @@ import Graphics.UI.GLUT
 import Data.Time.Clock
 import Control.Concurrent
 import Control.Monad
+import Graphics.Rendering.OpenGL.Raw( glBegin, glEnd, gl_QUADS, glVertex3f )
 
 import Vis.Xyz
 import Vis.Quat
 import Vis.Camera
 
 data VisColor = Rgb GLfloat GLfloat GLfloat
+              | Rgba GLfloat GLfloat GLfloat GLfloat
 
 setColor :: VisColor -> IO ()
-setColor (Rgb r g b) = color (Color3 r g b)
+setColor (Rgb r g b)    = color (Color3 r g b)
+setColor (Rgba r g b a) = color (Color4 r g b a)
 
 setMaterialDiffuse :: VisColor -> GLfloat -> IO ()
 setMaterialDiffuse (Rgb r g b) a = materialDiffuse Front $= Color4 r g b a
+setMaterialDiffuse (Rgba r g b a) _ = materialDiffuse Front $= Color4 r g b a
 
 data VisObject a = VisCylinder (a,a) (Xyz a) (Quat a) VisColor
                  | VisBox (a,a,a) (Xyz a) (Quat a) VisColor
                  | VisLine [Xyz a] VisColor
                  | VisArrow (a,a) (Xyz a) (Xyz a) VisColor
                  | VisAxes (a,a) (Xyz a) (Quat a)
+                 | VisPlane (Xyz a) a VisColor VisColor
 
 myGlInit :: String -> IO ()
 myGlInit progName = do
@@ -89,15 +94,43 @@ drawObjects = mapM_ drawObject
         normalize $= Disabled
 
     -- line
-    drawObject (VisLine path (Rgb r g b)) =
+    drawObject (VisLine path col) =
       preservingMatrix $ do
         lighting $= Disabled
-        color (Color3 r g b :: Color3 GLfloat)
+        setColor col
         renderPrimitive LineStrip $ mapM_ (\(Xyz x' y' z') -> vertex$Vertex3 x' y' z') path
         lighting $= Enabled
 
+    -- plane
+    drawObject (VisPlane (Xyz x y z) offset col1 col2) =
+      preservingMatrix $ do
+        let norm = 1/(sqrt $ x*x + y*y + z*z)
+            x' = x*norm
+            y' = y*norm
+            z' = z*norm
+            r  = 10
+            n  = 5
+            eps = 0.01
+        translate (Vector3 (offset*x') (offset*y') (offset*z') :: Vector3 GLdouble)
+        rotate ((acos z')*180/pi :: GLdouble) (Vector3 (-y') x' 0)
+        mapM_ drawObject $ concat [[ VisLine [Xyz (-r) y0 eps, Xyz r y0 eps] col1
+                                   , VisLine [Xyz x0 (-r) eps, Xyz x0 r eps] col1
+                                   ] | x0 <- [-r,-r+r/n..r], y0 <- [-r,-r+r/n..r]]
+        mapM_ drawObject $ concat [[ VisLine [Xyz (-r) y0 (-eps), Xyz r y0 (-eps)] col1
+                                   , VisLine [Xyz x0 (-r) (-eps), Xyz x0 r (-eps)] col1
+                                   ] | x0 <- [-r,-r+r/n..r], y0 <- [-r,-r+r/n..r]]
+        glBegin gl_QUADS -- start drawing a polygon (4 sided)
+        setColor col2
+--        glColor3f    0    1    0  -- set color to green
+        let r' = realToFrac r
+        glVertex3f   r'    r'  0
+        glVertex3f (-r')   r'  0
+        glVertex3f (-r')  (-r')  0
+        glVertex3f   r'   (-r')  0
+        glEnd
+--
     -- arrow
-    drawObject (VisArrow (size, aspectRatio) (Xyz x0 y0 z0) (Xyz x y z) (Rgb r g b)) =
+    drawObject (VisArrow (size, aspectRatio) (Xyz x0 y0 z0) (Xyz x y z) col) =
       preservingMatrix $ do
         let numSlices = 8
             numStacks = 15
@@ -112,8 +145,8 @@ drawObjects = mapM_ drawObject
         translate (Vector3 x0 y0 z0 :: Vector3 GLdouble)
         rotate rotAngle rotAxis
         
-        materialDiffuse Front $= Color4 r g b 1
-        color (Color3 r g b :: Color3 GLfloat)
+        setMaterialDiffuse col 1
+        setColor col
         -- cylinder
         renderObject Solid (Cylinder' cylinderRadius cylinderHeight numSlices numStacks)
         -- cone
