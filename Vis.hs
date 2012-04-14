@@ -4,7 +4,7 @@
 
 module Vis ( vis
            , VisObject(..)
-           , Rgb(..)
+           , VisColor(..)
            , Camera0(..)
            , module Vis.Xyz
            , module Vis.Quat
@@ -21,12 +21,19 @@ import Vis.Xyz
 import Vis.Quat
 import Vis.Camera
 
-data Rgb a = Rgb a a a
-data VisObject a b = VisCylinder (a,a) (Xyz a) (Quat a) (Rgb b)
-                   | VisBox (a,a,a) (Xyz a) (Quat a) (Rgb b)
-                   | VisLine [Xyz a] (Rgb b)
-                   | VisArrow (a,a) (Xyz a) (Xyz a) (Rgb b)
-                   | VisAxes (a,a) (Xyz a) (Quat a)
+data VisColor = Rgb GLfloat GLfloat GLfloat
+
+setColor :: VisColor -> IO ()
+setColor (Rgb r g b) = color (Color3 r g b)
+
+setMaterialDiffuse :: VisColor -> GLfloat -> IO ()
+setMaterialDiffuse (Rgb r g b) a = materialDiffuse Front $= Color4 r g b a
+
+data VisObject a = VisCylinder (a,a) (Xyz a) (Quat a) VisColor
+                 | VisBox (a,a,a) (Xyz a) (Quat a) VisColor
+                 | VisLine [Xyz a] VisColor
+                 | VisArrow (a,a) (Xyz a) (Xyz a) VisColor
+                 | VisAxes (a,a) (Xyz a) (Quat a)
 
 myGlInit :: String -> IO ()
 myGlInit progName = do
@@ -55,26 +62,26 @@ myGlInit progName = do
   colorMaterial $= Just (Front, Diffuse)
 
 
-drawObjects :: [VisObject GLdouble GLfloat] -> IO ()
+drawObjects :: [VisObject GLdouble] -> IO ()
 drawObjects objects = do
   mapM_ drawObject objects
   where
-    drawObject :: VisObject GLdouble GLfloat -> IO ()
+    drawObject :: VisObject GLdouble -> IO ()
     -- cylinder
-    drawObject (VisCylinder (height,radius) (Xyz x y z) (Quat q0 q1 q2 q3) (Rgb r g b)) = do
+    drawObject (VisCylinder (height,radius) (Xyz x y z) (Quat q0 q1 q2 q3) col) = do
       preservingMatrix $ do
-        materialDiffuse Front $= Color4 r g b 1
-        color (Color3 r g b :: Color3 GLfloat)
+        setMaterialDiffuse col 1
+        setColor col
         translate (Vector3 x y z :: Vector3 GLdouble)
         rotate (2*acos(q0)*180/pi :: GLdouble) (Vector3 q1 q2 q3)
         translate (Vector3 0 0 (-height/2) :: Vector3 GLdouble)
         renderObject Solid (Cylinder' radius height 10 10)
 
     -- box
-    drawObject (VisBox (dx,dy,dz) (Xyz x y z) (Quat q0 q1 q2 q3) (Rgb r g b)) = do
+    drawObject (VisBox (dx,dy,dz) (Xyz x y z) (Quat q0 q1 q2 q3) col) = do
       preservingMatrix $ do
-        materialDiffuse Front $= Color4 r g b 0.1
-        color (Color3 r g b :: Color3 GLfloat)
+        setMaterialDiffuse col 0.1
+        setColor col
         translate (Vector3 x y z :: Vector3 GLdouble)
         rotate (2*acos(q0)*180/pi :: GLdouble) (Vector3 q1 q2 q3)
         normalize $= Enabled
@@ -248,7 +255,7 @@ motion camera (Position x y) = do
    postRedisplay Nothing
 
 
-vis :: Camera0 -> ((Maybe SpecialKey) -> a -> IO a) -> ((Maybe SpecialKey) -> a -> [VisObject GLdouble GLfloat]) -> a -> Double -> IO ()
+vis :: Camera0 -> ((Maybe SpecialKey) -> a -> IO a) -> ((Maybe SpecialKey) -> a -> [VisObject GLdouble]) -> a -> Double -> IO ()
 vis camera0 userSimFun userDrawFun x0 ts = do
   -- init glut/scene
   (progName, _args) <- getArgsAndInitialize
