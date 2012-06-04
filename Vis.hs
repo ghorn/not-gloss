@@ -190,6 +190,7 @@ display stateMVar keyRef visReadyMVar camera userDrawFun = do
    flush
    swapBuffers
    _ <- swapMVar visReadyMVar True
+   postRedisplay Nothing
    return ()
 
 
@@ -202,7 +203,6 @@ reshape size@(Size w h) = do
    matrixMode $= Modelview 0
    loadIdentity
    postRedisplay Nothing
-
 
 keyboardMouse :: Camera -> MVar (Maybe SpecialKey) -> KeyboardMouseCallback
 keyboardMouse camera keyRef key keyState _ _ =
