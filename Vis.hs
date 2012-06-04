@@ -6,8 +6,6 @@ module Vis ( vis
            , VisObject(..)
            , VisColor(..)
            , Camera0(..)
-           , module Vis.Xyz
-           , module Vis.Quat
            ) where
 
 import Data.IORef ( newIORef )
@@ -18,8 +16,7 @@ import Control.Concurrent
 import Control.Monad
 import Graphics.Rendering.OpenGL.Raw( glBegin, glEnd, gl_QUADS, glVertex3f )
 
-import Vis.Xyz
-import Vis.Quat
+import SpatialMath
 import Vis.Camera
 
 data VisColor = Rgb GLfloat GLfloat GLfloat
