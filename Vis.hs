@@ -14,7 +14,7 @@ import Graphics.UI.GLUT
 import Data.Time.Clock
 import Control.Concurrent
 import Control.Monad
-import Graphics.Rendering.OpenGL.Raw( glBegin, glEnd, gl_QUADS, glVertex3f )
+import Graphics.Rendering.OpenGL.Raw( glBegin, glEnd, gl_QUADS, gl_TRIANGLES, glVertex3f )
 
 import SpatialMath
 import Vis.Camera
@@ -36,6 +36,8 @@ data VisObject a = VisCylinder (a,a) (Xyz a) (Quat a) VisColor
                  | VisArrow (a,a) (Xyz a) (Xyz a) VisColor
                  | VisAxes (a,a) (Xyz a) (Quat a)
                  | VisPlane (Xyz a) a VisColor VisColor
+                 | VisTriangle (Xyz a) (Xyz a) (Xyz a) VisColor
+                 | VisQuad (Xyz a) (Xyz a) (Xyz a) (Xyz a) VisColor
 
 instance Functor VisObject where
   fmap f (VisCylinder (x,y) xyz quat col) = VisCylinder (f x, f y) (fmap f xyz) (fmap f quat) col
@@ -44,6 +46,8 @@ instance Functor VisObject where
   fmap f (VisArrow (x,y) xyz0 xyz1 col) = VisArrow (f x, f y) (fmap f xyz0) (fmap f xyz1) col
   fmap f (VisAxes (x,y) xyz quat) = VisAxes (f x, f y) (fmap f xyz) (fmap f quat)
   fmap f (VisPlane xyz x col0 col1) = VisPlane (fmap f xyz) (f x) col0 col1
+  fmap f (VisTriangle x0 x1 x2 col) = VisTriangle (fmap f x0) (fmap f x1) (fmap f x2) col
+  fmap f (VisQuad x0 x1 x2 x3 col) = VisQuad (fmap f x0) (fmap f x1) (fmap f x2) (fmap f x3) col
 
 myGlInit :: String -> IO ()
 myGlInit progName = do
@@ -76,6 +80,32 @@ drawObjects :: [VisObject GLdouble] -> IO ()
 drawObjects = mapM_ drawObject
   where
     drawObject :: VisObject GLdouble -> IO ()
+
+    -- triangle
+    drawObject vt@(VisTriangle _ _ _ _) =
+      preservingMatrix $ do
+        let VisTriangle (Xyz x0 y0 z0) (Xyz x1 y1 z1) (Xyz x2 y2 z2) col = fmap realToFrac vt
+        setMaterialDiffuse col 1
+        setColor col
+        glBegin gl_TRIANGLES
+        glVertex3f x0 y0 z0
+        glVertex3f x1 y1 z1
+        glVertex3f x2 y2 z2
+        glEnd
+       
+    -- quad
+    drawObject vq@(VisQuad _ _ _ _ _) =
+      preservingMatrix $ do
+        let VisQuad (Xyz x0 y0 z0) (Xyz x1 y1 z1) (Xyz x2 y2 z2) (Xyz x3 y3 z3) col = fmap realToFrac vq
+        setMaterialDiffuse col 1
+        setColor col
+        glBegin gl_QUADS
+        glVertex3f x0 y0 z0
+        glVertex3f x1 y1 z1
+        glVertex3f x2 y2 z2
+        glVertex3f x3 y3 z3
+        glEnd
+    
     -- cylinder
     drawObject (VisCylinder (height,radius) (Xyz x y z) (Quat q0 q1 q2 q3) col) =
       preservingMatrix $ do
@@ -124,16 +154,15 @@ drawObjects = mapM_ drawObject
         mapM_ drawObject $ concat [[ VisLine [Xyz (-r) y0 (-eps), Xyz r y0 (-eps)] col1
                                    , VisLine [Xyz x0 (-r) (-eps), Xyz x0 r (-eps)] col1
                                    ] | x0 <- [-r,-r+r/n..r], y0 <- [-r,-r+r/n..r]]
-        glBegin gl_QUADS -- start drawing a polygon (4 sided)
+        glBegin gl_QUADS
         setColor col2
---        glColor3f    0    1    0  -- set color to green
         let r' = realToFrac r
         glVertex3f   r'    r'  0
         glVertex3f (-r')   r'  0
         glVertex3f (-r')  (-r')  0
         glVertex3f   r'   (-r')  0
         glEnd
---
+
     -- arrow
     drawObject (VisArrow (size, aspectRatio) (Xyz x0 y0 z0) (Xyz x y z) col) =
       preservingMatrix $ do
