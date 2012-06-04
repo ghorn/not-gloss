@@ -2,7 +2,7 @@
 
 module Main where
 
-import Graphics.UI.GLUT( SpecialKey(..), GLdouble )
+import Graphics.UI.GLUT( SpecialKey(..) )
 import SpatialMath
 import qualified Quat
 import Vis
@@ -17,10 +17,10 @@ simloop _ (State (x,v) q0) = return $ State (x + v*ts, v + 5*ts*(-1 - x)) (Quat.
   where
     dq = Quat 1 (x*ts) (v*ts) (x*v*ts)
 
-drawFun :: Maybe SpecialKey -> State Double -> [VisObject GLdouble]
+drawFun :: Maybe SpecialKey -> State Double -> [VisObject Double]
 drawFun key (State (x,_) quat) = [box,plane]
   where
-    box = VisBox (0.2, 0.2, 0.2) (Xyz 0 0 (realToFrac x)) (fmap realToFrac quat) col
+    box = VisBox (0.2, 0.2, 0.2) (Xyz 0 0 x) quat col
       where
         col = case key of Nothing -> Rgb 0 1 1
                           _       -> Rgb 1 1 0

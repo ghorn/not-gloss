@@ -37,6 +37,14 @@ data VisObject a = VisCylinder (a,a) (Xyz a) (Quat a) VisColor
                  | VisAxes (a,a) (Xyz a) (Quat a)
                  | VisPlane (Xyz a) a VisColor VisColor
 
+instance Functor VisObject where
+  fmap f (VisCylinder (x,y) xyz quat col) = VisCylinder (f x, f y) (fmap f xyz) (fmap f quat) col
+  fmap f (VisBox (x,y,z) xyz quat col) = VisBox (f x, f y, f z) (fmap f xyz) (fmap f quat) col
+  fmap f (VisLine xyzs col) = VisLine (map (fmap f) xyzs) col
+  fmap f (VisArrow (x,y) xyz0 xyz1 col) = VisArrow (f x, f y) (fmap f xyz0) (fmap f xyz1) col
+  fmap f (VisAxes (x,y) xyz quat) = VisAxes (f x, f y) (fmap f xyz) (fmap f quat)
+  fmap f (VisPlane xyz x col0 col1) = VisPlane (fmap f xyz) (f x) col0 col1
+
 myGlInit :: String -> IO ()
 myGlInit progName = do
   initialDisplayMode $= [ DoubleBuffered, RGBMode, WithDepthBuffer ]
@@ -279,7 +287,7 @@ motion camera (Position x y) = do
    postRedisplay Nothing
 
 
-vis :: Camera0 -> (Maybe SpecialKey -> a -> IO a) -> (Maybe SpecialKey -> a -> [VisObject GLdouble]) -> a -> Double -> IO ()
+vis :: Real b => Camera0 -> (Maybe SpecialKey -> a -> IO a) -> (Maybe SpecialKey -> a -> [VisObject b]) -> a -> Double -> IO ()
 vis camera0 userSimFun userDrawFun x0 ts = do
   -- init glut/scene
   (progName, _args) <- getArgsAndInitialize
@@ -295,7 +303,7 @@ vis camera0 userSimFun userDrawFun x0 ts = do
   _ <- forkIO $ simThread stateMVar visReadyMVar userSimFun ts latestKey
   
   -- setup callbacks
-  displayCallback $= display stateMVar latestKey visReadyMVar camera (\x y -> drawObjects (userDrawFun x y))
+  displayCallback $= display stateMVar latestKey visReadyMVar camera (\x y -> drawObjects $ map (fmap realToFrac) (userDrawFun x y))
   reshapeCallback $= Just reshape
   keyboardMouseCallback $= Just (keyboardMouse camera  latestKey)
   motionCallback $= Just (motion camera)
