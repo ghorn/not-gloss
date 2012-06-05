@@ -20,7 +20,7 @@ library
                        GLUT == 2.3.*,
                        time == 1.4.*,
                        OpenGLRaw == 1.2.*,
-                       spatial-math >= 0.1.1 && < 0.2
+                       spatial-math >= 0.1.2 && < 0.2
 
   ghc-options:         -threaded
 
