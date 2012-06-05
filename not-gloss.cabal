@@ -22,7 +22,7 @@ library
                        OpenGLRaw == 1.2.*,
                        spatial-math >= 0.1.2 && < 0.2
 
-  ghc-options:         -threaded
+  ghc-options:
 
 executable not-gloss-example
   main-is:             Example.hs
