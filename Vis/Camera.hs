@@ -48,4 +48,3 @@ makeCamera camera0 = do
                 , leftButton = leftButton'
                 , rightButton = rightButton'
                 }
-

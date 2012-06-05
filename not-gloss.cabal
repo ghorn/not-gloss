@@ -13,8 +13,10 @@ cabal-version:       >=1.8
 
 library
   exposed-modules:     Vis
+                       Vis.Camera
+                       Vis.VisObject
 
-  other-modules:       Vis.Camera
+  other-modules:       
 
   build-depends:       base == 4.5.*,
                        GLUT == 2.3.*,
