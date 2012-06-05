@@ -33,3 +33,7 @@ executable not-gloss-example
                        time == 1.4.*,
                        not-gloss
   ghc-options:         -threaded
+
+source-repository head
+  type:     git
+  location: git://github.com/ghorn/not-gloss.git
