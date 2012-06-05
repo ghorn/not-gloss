@@ -5,6 +5,7 @@ module Main where
 import Graphics.UI.GLUT( SpecialKey(..) )
 import SpatialMath
 import qualified Quat
+
 import Vis
 
 ts :: Double
@@ -23,9 +24,9 @@ drawFun key (State (x,_) quat) = [axes,box,plane]
     axes = VisAxes (0.5, 15) (Xyz 0 0 0) (Quat 1 0 0 0)
     box = VisBox (0.2, 0.2, 0.2) (Xyz 0 0 x) quat col
       where
-        col = case key of Nothing -> Rgb 0 1 1
-                          _       -> Rgb 1 1 0
-    plane = VisPlane (Xyz 0 0 1) 0 (Rgb 1 1 1) (Rgba 0.4 0.6 0.65 0.4)
+        col = case key of Nothing -> makeColor 0 1 1 1
+                          _       -> makeColor 1 1 0 1
+    plane = VisPlane (Xyz 0 0 1) 0 (makeColor 1 1 1 1) (makeColor 0.4 0.6 0.65 0.4)
 
 main :: IO ()
 main = do

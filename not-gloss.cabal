@@ -14,6 +14,7 @@ cabal-version:       >=1.8
 library
   exposed-modules:     Vis
                        Vis.Camera
+                       Vis.Interface
                        Vis.VisObject
 
   other-modules:       
@@ -22,7 +23,8 @@ library
                        GLUT == 2.3.*,
                        time == 1.4.*,
                        OpenGLRaw == 1.2.*,
-                       spatial-math >= 0.1.2 && < 0.2
+                       spatial-math >= 0.1.2 && < 0.2,
+                       gloss >= 1.7.4 && < 1.7.5
 
   ghc-options:
 
@@ -33,6 +35,7 @@ executable not-gloss-example
                        spatial-math >= 0.1.2 && < 0.2,
                        OpenGLRaw == 1.2.*,
                        time == 1.4.*,
+                       gloss >= 1.7.4 && < 1.7.5,
                        not-gloss
   ghc-options:         -threaded
 

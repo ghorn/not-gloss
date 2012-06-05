@@ -1,34 +1,32 @@
 {-# OPTIONS_GHC -Wall #-}
 
 module Vis.VisObject ( VisObject(..)
-                     , VisColor(..)
                      , drawObjects
                      ) where
 
-import Graphics.UI.GLUT
+import Graphics.UI.GLUT hiding ( Color )
 import Graphics.Rendering.OpenGL.Raw( glBegin, glEnd, gl_QUADS, gl_QUAD_STRIP, gl_TRIANGLES, glVertex3f, glVertex3d, glNormal3d, gl_TRIANGLE_FAN )
+import Graphics.Gloss.Data.Color
 
 import SpatialMath
 
-data VisColor = Rgb GLfloat GLfloat GLfloat
-              | Rgba GLfloat GLfloat GLfloat GLfloat
+glColorOfColor :: Color -> Color4 GLfloat
+glColorOfColor = (\(r,g,b,a) -> fmap realToFrac (Color4 r g b a)) . rgbaOfColor
 
-setColor :: VisColor -> IO ()
-setColor (Rgb r g b)    = color (Color3 r g b)
-setColor (Rgba r g b a) = color (Color4 r g b a)
+setColor :: Color -> IO ()
+setColor = color . glColorOfColor
 
-setMaterialDiffuse :: VisColor -> GLfloat -> IO ()
-setMaterialDiffuse (Rgb r g b) a = materialDiffuse Front $= Color4 r g b a
-setMaterialDiffuse (Rgba r g b a) _ = materialDiffuse Front $= Color4 r g b a
+setMaterialDiffuse :: Color -> IO ()
+setMaterialDiffuse col = materialDiffuse Front $= (glColorOfColor col)
 
-data VisObject a = VisCylinder (a,a) (Xyz a) (Quat a) VisColor
-                 | VisBox (a,a,a) (Xyz a) (Quat a) VisColor
-                 | VisLine [Xyz a] VisColor
-                 | VisArrow (a,a) (Xyz a) (Xyz a) VisColor
+data VisObject a = VisCylinder (a,a) (Xyz a) (Quat a) Color
+                 | VisBox (a,a,a) (Xyz a) (Quat a) Color
+                 | VisLine [Xyz a] Color
+                 | VisArrow (a,a) (Xyz a) (Xyz a) Color
                  | VisAxes (a,a) (Xyz a) (Quat a)
-                 | VisPlane (Xyz a) a VisColor VisColor
-                 | VisTriangle (Xyz a) (Xyz a) (Xyz a) VisColor
-                 | VisQuad (Xyz a) (Xyz a) (Xyz a) (Xyz a) VisColor
+                 | VisPlane (Xyz a) a Color Color
+                 | VisTriangle (Xyz a) (Xyz a) (Xyz a) Color
+                 | VisQuad (Xyz a) (Xyz a) (Xyz a) (Xyz a) Color
 
 instance Functor VisObject where
   fmap f (VisCylinder (x,y) xyz quat col) = VisCylinder (f x, f y) (fmap f xyz) (fmap f quat) col
@@ -48,7 +46,7 @@ drawObject :: VisObject GLdouble -> IO ()
 -- triangle
 drawObject (VisTriangle (Xyz x0 y0 z0) (Xyz x1 y1 z1) (Xyz x2 y2 z2) col) =
   preservingMatrix $ do
-    setMaterialDiffuse col 1
+    setMaterialDiffuse col
     setColor col
     glBegin gl_TRIANGLES
     glVertex3d x0 y0 z0
@@ -59,7 +57,7 @@ drawObject (VisTriangle (Xyz x0 y0 z0) (Xyz x1 y1 z1) (Xyz x2 y2 z2) col) =
 -- quad
 drawObject (VisQuad (Xyz x0 y0 z0) (Xyz x1 y1 z1) (Xyz x2 y2 z2) (Xyz x3 y3 z3) col) =
   preservingMatrix $ do
-    setMaterialDiffuse col 1
+    setMaterialDiffuse col
     setColor col
     glBegin gl_QUADS
     glVertex3d x0 y0 z0
@@ -71,7 +69,7 @@ drawObject (VisQuad (Xyz x0 y0 z0) (Xyz x1 y1 z1) (Xyz x2 y2 z2) (Xyz x3 y3 z3) 
 -- cylinder
 drawObject (VisCylinder (height,radius) (Xyz x y z) (Quat q0 q1 q2 q3) col) =
   preservingMatrix $ do
-    setMaterialDiffuse col 1
+    setMaterialDiffuse col
     setColor col
     
     translate (Vector3 x y z :: Vector3 GLdouble)
@@ -118,7 +116,7 @@ drawObject (VisCylinder (height,radius) (Xyz x y z) (Quat q0 q1 q2 q3) col) =
 -- box
 drawObject (VisBox (dx,dy,dz) (Xyz x y z) (Quat q0 q1 q2 q3) col) =
   preservingMatrix $ do
-    setMaterialDiffuse col 0.1
+    setMaterialDiffuse col
     setColor col
     translate (Vector3 x y z :: Vector3 GLdouble)
     rotate (2 * acos q0 *180/pi :: GLdouble) (Vector3 q1 q2 q3)
@@ -181,7 +179,7 @@ drawObject (VisArrow (size, aspectRatio) (Xyz x0 y0 z0) (Xyz x y z) col) =
     -- cylinder
     drawObject $ VisCylinder (cylinderHeight, cylinderRadius) (Xyz 0 0 0) (Quat 1 0 0 0) col
     -- cone
-    setMaterialDiffuse col 1
+    setMaterialDiffuse col
     setColor col
     translate (Vector3 0 0 cylinderHeight :: Vector3 GLdouble)
     renderObject Solid (Cone coneRadius coneHeight numSlices numStacks)
@@ -190,7 +188,7 @@ drawObject (VisAxes (size, aspectRatio) (Xyz x0 y0 z0) (Quat q0 q1 q2 q3)) = pre
   translate (Vector3 x0 y0 z0 :: Vector3 GLdouble)
   rotate (2 * acos q0 *180/pi :: GLdouble) (Vector3 q1 q2 q3)
     
-  let xAxis = VisArrow (size, aspectRatio) (Xyz 0 0 0) (Xyz 1 0 0) (Rgb 1 0 0)
-      yAxis = VisArrow (size, aspectRatio) (Xyz 0 0 0) (Xyz 0 1 0) (Rgb 0 1 0)
-      zAxis = VisArrow (size, aspectRatio) (Xyz 0 0 0) (Xyz 0 0 1) (Rgb 0 0 1)
+  let xAxis = VisArrow (size, aspectRatio) (Xyz 0 0 0) (Xyz 1 0 0) (makeColor 1 0 0 1)
+      yAxis = VisArrow (size, aspectRatio) (Xyz 0 0 0) (Xyz 0 1 0) (makeColor 0 1 0 1)
+      zAxis = VisArrow (size, aspectRatio) (Xyz 0 0 0) (Xyz 0 0 1) (makeColor 0 0 1 1)
   drawObjects [xAxis, yAxis, zAxis]
