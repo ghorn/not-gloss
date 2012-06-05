@@ -18,8 +18,9 @@ simloop _ (State (x,v) q0) = return $ State (x + v*ts, v + 5*ts*(-1 - x)) (Quat.
     dq = Quat 1 (x*ts) (v*ts) (x*v*ts)
 
 drawFun :: Maybe SpecialKey -> State Double -> [VisObject Double]
-drawFun key (State (x,_) quat) = [box,plane]
+drawFun key (State (x,_) quat) = [axes,box,plane]
   where
+    axes = VisAxes (0.5, 15) (Xyz 0 0 0) (Quat 1 0 0 0)
     box = VisBox (0.2, 0.2, 0.2) (Xyz 0 0 x) quat col
       where
         col = case key of Nothing -> Rgb 0 1 1

@@ -14,7 +14,7 @@ import Graphics.UI.GLUT
 import Data.Time.Clock
 import Control.Concurrent
 import Control.Monad
-import Graphics.Rendering.OpenGL.Raw( glBegin, glEnd, gl_QUADS, gl_TRIANGLES, glVertex3f )
+import Graphics.Rendering.OpenGL.Raw( glBegin, glEnd, gl_QUADS, gl_QUAD_STRIP, gl_TRIANGLES, glVertex3f, glVertex3d, glNormal3d, gl_TRIANGLE_FAN )
 
 import SpatialMath
 import Vis.Camera
@@ -82,28 +82,26 @@ drawObjects = mapM_ drawObject
     drawObject :: VisObject GLdouble -> IO ()
 
     -- triangle
-    drawObject vt@(VisTriangle _ _ _ _) =
+    drawObject (VisTriangle (Xyz x0 y0 z0) (Xyz x1 y1 z1) (Xyz x2 y2 z2) col) =
       preservingMatrix $ do
-        let VisTriangle (Xyz x0 y0 z0) (Xyz x1 y1 z1) (Xyz x2 y2 z2) col = fmap realToFrac vt
         setMaterialDiffuse col 1
         setColor col
         glBegin gl_TRIANGLES
-        glVertex3f x0 y0 z0
-        glVertex3f x1 y1 z1
-        glVertex3f x2 y2 z2
+        glVertex3d x0 y0 z0
+        glVertex3d x1 y1 z1
+        glVertex3d x2 y2 z2
         glEnd
        
     -- quad
-    drawObject vq@(VisQuad _ _ _ _ _) =
+    drawObject (VisQuad (Xyz x0 y0 z0) (Xyz x1 y1 z1) (Xyz x2 y2 z2) (Xyz x3 y3 z3) col) =
       preservingMatrix $ do
-        let VisQuad (Xyz x0 y0 z0) (Xyz x1 y1 z1) (Xyz x2 y2 z2) (Xyz x3 y3 z3) col = fmap realToFrac vq
         setMaterialDiffuse col 1
         setColor col
         glBegin gl_QUADS
-        glVertex3f x0 y0 z0
-        glVertex3f x1 y1 z1
-        glVertex3f x2 y2 z2
-        glVertex3f x3 y3 z3
+        glVertex3d x0 y0 z0
+        glVertex3d x1 y1 z1
+        glVertex3d x2 y2 z2
+        glVertex3d x3 y3 z3
         glEnd
     
     -- cylinder
@@ -111,10 +109,47 @@ drawObjects = mapM_ drawObject
       preservingMatrix $ do
         setMaterialDiffuse col 1
         setColor col
+        
         translate (Vector3 x y z :: Vector3 GLdouble)
         rotate (2 * acos q0 *180/pi :: GLdouble) (Vector3 q1 q2 q3)
-        translate (Vector3 0 0 (-height/2) :: Vector3 GLdouble)
-        renderObject Solid (Cylinder' radius height 10 10)
+----        translate (Vector3 0 0 (-height/2) :: Vector3 GLdouble)
+
+        let nslices = 10 :: Int
+            nstacks = 10 :: Int
+
+            -- Pre-computed circle
+            sinCosTable = map (\q -> (sin q, cos q)) angles
+              where
+                angle = 2*pi/(fromIntegral nslices)
+                angles = reverse $ map ((angle*) . fromIntegral) [0..(nslices+1)]
+                
+        -- Cover the base and top
+        glBegin gl_TRIANGLE_FAN
+        glNormal3d 0 0 (-1)
+        glVertex3d 0 0 0
+        mapM_ (\(s,c) -> glVertex3d (c*radius) (s*radius) 0) sinCosTable
+        glEnd
+
+        glBegin gl_TRIANGLE_FAN
+        glNormal3d 0 0 1
+        glVertex3d 0 0 height
+        mapM_ (\(s,c) -> glVertex3d (c*radius) (s*radius) height) (reverse sinCosTable)
+        glEnd
+
+        let -- Do the stacks
+            -- Step in z and radius as stacks are drawn.
+            zSteps = map (\k -> (fromIntegral k)*height/(fromIntegral nstacks)) [0..nstacks]
+            drawSlice z0 z1 (s,c) = do
+              glNormal3d  c          s         0
+              glVertex3d (c*radius) (s*radius) z0
+              glVertex3d (c*radius) (s*radius) z1
+
+            drawSlices (z0,z1) = do
+              glBegin gl_QUAD_STRIP
+              mapM_ (drawSlice z0 z1) sinCosTable
+              glEnd
+
+        mapM_ drawSlices $ zip (init zSteps) (tail zSteps)
 
     -- box
     drawObject (VisBox (dx,dy,dz) (Xyz x y z) (Quat q0 q1 q2 q3) col) =
@@ -179,11 +214,11 @@ drawObjects = mapM_ drawObject
         translate (Vector3 x0 y0 z0 :: Vector3 GLdouble)
         rotate rotAngle rotAxis
         
+        -- cylinder
+        drawObject $ VisCylinder (cylinderHeight, cylinderRadius) (Xyz 0 0 0) (Quat 1 0 0 0) col
+        -- cone
         setMaterialDiffuse col 1
         setColor col
-        -- cylinder
-        renderObject Solid (Cylinder' cylinderRadius cylinderHeight numSlices numStacks)
-        -- cone
         translate (Vector3 0 0 cylinderHeight :: Vector3 GLdouble)
         renderObject Solid (Cone coneRadius coneHeight numSlices numStacks)
 
