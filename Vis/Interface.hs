@@ -11,7 +11,7 @@ import Control.Monad ( when, unless, forever )
 import Graphics.UI.GLUT
 
 import Vis.Camera ( Camera(..) , makeCamera, Camera0(..) )
-import Vis.VisObject ( VisObject(..), drawObjects )
+import Vis.VisObject ( VisObject(..), drawObjects, setPerspectiveMode )
 
 myGlInit :: String -> IO ()
 myGlInit progName = do
@@ -76,12 +76,9 @@ display stateMVar keyRef visReadyMVar camera userDrawFun = do
 
 
 reshape :: ReshapeCallback
-reshape size@(Size w h) = do
+reshape size@(Size _ _) = do
    viewport $= (Position 0 0, size)
-   matrixMode $= Projection
-   loadIdentity
-   perspective 40 (fromIntegral w / fromIntegral h) 0.1 100
-   matrixMode $= Modelview 0
+   setPerspectiveMode
    loadIdentity
    postRedisplay Nothing
 

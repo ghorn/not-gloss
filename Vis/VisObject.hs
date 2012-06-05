@@ -2,31 +2,35 @@
 
 module Vis.VisObject ( VisObject(..)
                      , drawObjects
+                     , setPerspectiveMode
                      ) where
 
-import Graphics.UI.GLUT hiding ( Color )
-import Graphics.Rendering.OpenGL.Raw( glBegin, glEnd, gl_QUADS, gl_QUAD_STRIP, gl_TRIANGLES, glVertex3f, glVertex3d, glNormal3d, gl_TRIANGLE_FAN )
-import Graphics.Gloss.Data.Color
+import Graphics.Rendering.OpenGL.Raw ( glBegin, glEnd, gl_QUADS, gl_QUAD_STRIP, gl_TRIANGLES, glVertex3f, glVertex3d, glNormal3d, gl_TRIANGLE_FAN, glRasterPos2d ,glRasterPos3d )
+import qualified Graphics.Gloss.Data.Color as Gloss
+import Graphics.UI.GLUT
 
 import SpatialMath
 
-glColorOfColor :: Color -> Color4 GLfloat
-glColorOfColor = (\(r,g,b,a) -> fmap realToFrac (Color4 r g b a)) . rgbaOfColor
+glColorOfColor :: Gloss.Color -> Color4 GLfloat
+glColorOfColor = (\(r,g,b,a) -> fmap realToFrac (Color4 r g b a)) . Gloss.rgbaOfColor
 
-setColor :: Color -> IO ()
+setColor :: Gloss.Color -> IO ()
 setColor = color . glColorOfColor
 
-setMaterialDiffuse :: Color -> IO ()
+setMaterialDiffuse :: Gloss.Color -> IO ()
 setMaterialDiffuse col = materialDiffuse Front $= (glColorOfColor col)
 
-data VisObject a = VisCylinder (a,a) (Xyz a) (Quat a) Color
-                 | VisBox (a,a,a) (Xyz a) (Quat a) Color
-                 | VisLine [Xyz a] Color
-                 | VisArrow (a,a) (Xyz a) (Xyz a) Color
+data VisObject a = VisCylinder (a,a) (Xyz a) (Quat a) Gloss.Color
+                 | VisBox (a,a,a) (Xyz a) (Quat a) Gloss.Color
+                 | VisLine [Xyz a] Gloss.Color
+                 | VisArrow (a,a) (Xyz a) (Xyz a) Gloss.Color
                  | VisAxes (a,a) (Xyz a) (Quat a)
-                 | VisPlane (Xyz a) a Color Color
-                 | VisTriangle (Xyz a) (Xyz a) (Xyz a) Color
-                 | VisQuad (Xyz a) (Xyz a) (Xyz a) (Xyz a) Color
+                 | VisPlane (Xyz a) a Gloss.Color Gloss.Color
+                 | VisTriangle (Xyz a) (Xyz a) (Xyz a) Gloss.Color
+                 | VisQuad (Xyz a) (Xyz a) (Xyz a) (Xyz a) Gloss.Color
+                 | VisCustom (IO ())
+                 | Vis3dText String (Xyz a) BitmapFont Gloss.Color
+                 | Vis2dText String (a,a) BitmapFont Gloss.Color
 
 instance Functor VisObject where
   fmap f (VisCylinder (x,y) xyz quat col) = VisCylinder (f x, f y) (fmap f xyz) (fmap f quat) col
@@ -37,10 +41,23 @@ instance Functor VisObject where
   fmap f (VisPlane xyz x col0 col1) = VisPlane (fmap f xyz) (f x) col0 col1
   fmap f (VisTriangle x0 x1 x2 col) = VisTriangle (fmap f x0) (fmap f x1) (fmap f x2) col
   fmap f (VisQuad x0 x1 x2 x3 col) = VisQuad (fmap f x0) (fmap f x1) (fmap f x2) (fmap f x3) col
+  fmap f (Vis3dText t xyz bmf col) = Vis3dText t (fmap f xyz) bmf col
+  fmap f (Vis2dText t (x,y) bmf col) = Vis2dText t (f x, f y) bmf col
+  fmap _ (VisCustom f) = VisCustom f
+
+setPerspectiveMode :: IO ()
+setPerspectiveMode = do
+  (_, Size w h) <- get viewport
+  matrixMode $= Projection
+  loadIdentity
+  perspective 40 (fromIntegral w / fromIntegral h) 0.1 100
+  matrixMode $= Modelview 0
 
 
 drawObjects :: [VisObject GLdouble] -> IO ()
-drawObjects = mapM_ drawObject
+drawObjects objects = do
+  setPerspectiveMode
+  mapM_ drawObject objects
 
 drawObject :: VisObject GLdouble -> IO ()
 -- triangle
@@ -153,6 +170,7 @@ drawObject (VisPlane (Xyz x y z) offset col1 col2) =
                                ] | x0 <- [-r,-r+r/n..r], y0 <- [-r,-r+r/n..r]]
     glBegin gl_QUADS
     setColor col2
+
     let r' = realToFrac r
     glVertex3f   r'    r'  0
     glVertex3f (-r')   r'  0
@@ -187,8 +205,35 @@ drawObject (VisArrow (size, aspectRatio) (Xyz x0 y0 z0) (Xyz x y z) col) =
 drawObject (VisAxes (size, aspectRatio) (Xyz x0 y0 z0) (Quat q0 q1 q2 q3)) = preservingMatrix $ do
   translate (Vector3 x0 y0 z0 :: Vector3 GLdouble)
   rotate (2 * acos q0 *180/pi :: GLdouble) (Vector3 q1 q2 q3)
-    
-  let xAxis = VisArrow (size, aspectRatio) (Xyz 0 0 0) (Xyz 1 0 0) (makeColor 1 0 0 1)
-      yAxis = VisArrow (size, aspectRatio) (Xyz 0 0 0) (Xyz 0 1 0) (makeColor 0 1 0 1)
-      zAxis = VisArrow (size, aspectRatio) (Xyz 0 0 0) (Xyz 0 0 1) (makeColor 0 0 1 1)
+  
+  let xAxis = VisArrow (size, aspectRatio) (Xyz 0 0 0) (Xyz 1 0 0) (Gloss.makeColor 1 0 0 1)
+      yAxis = VisArrow (size, aspectRatio) (Xyz 0 0 0) (Xyz 0 1 0) (Gloss.makeColor 0 1 0 1)
+      zAxis = VisArrow (size, aspectRatio) (Xyz 0 0 0) (Xyz 0 0 1) (Gloss.makeColor 0 0 1 1)
   drawObjects [xAxis, yAxis, zAxis]
+
+drawObject (VisCustom f) = preservingMatrix f
+
+drawObject (Vis3dText string (Xyz x y z) font col) = preservingMatrix $ do
+  lighting $= Disabled
+  setColor col
+  glRasterPos3d x y z
+  renderString font string
+  lighting $= Enabled
+
+drawObject (Vis2dText string (x,y) font col) = preservingMatrix $ do
+  lighting $= Disabled
+  setColor col
+
+  matrixMode $= Projection
+  loadIdentity
+
+  (_, Size w h) <- get viewport
+  ortho2D 0 (fromIntegral w) 0 (fromIntegral h)
+  matrixMode $= Modelview 0
+  loadIdentity
+
+  glRasterPos2d x y
+  renderString font string
+
+  setPerspectiveMode
+  lighting $= Enabled
