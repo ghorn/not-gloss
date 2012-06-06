@@ -9,13 +9,14 @@ import Data.Time.Clock ( getCurrentTime, diffUTCTime, addUTCTime )
 import Control.Concurrent ( MVar, readMVar, swapMVar, newMVar, forkIO, threadDelay )
 import Control.Monad ( when, unless, forever )
 import Graphics.UI.GLUT
-
+import Graphics.Rendering.OpenGL.Raw
+                                       
 import Vis.Camera ( Camera(..) , makeCamera, Camera0(..) )
 import Vis.VisObject ( VisObject(..), drawObjects, setPerspectiveMode )
 
 myGlInit :: String -> IO ()
 myGlInit progName = do
-  initialDisplayMode $= [ DoubleBuffered, RGBMode, WithDepthBuffer ]
+  initialDisplayMode $= [ DoubleBuffered, RGBAMode, WithDepthBuffer ]
   Size x y <- get screenSize
   putStrLn $ "screen resolution " ++ show x ++ "x" ++ show y
   let intScale d i = round $ d*(realToFrac i :: Double)
@@ -36,9 +37,11 @@ myGlInit progName = do
    
   materialDiffuse Front $= Color4 0.5 0.5 0.5 1
   materialSpecular Front $= Color4 1 1 1 1
-  materialShininess Front $= 25
+  materialShininess Front $= 100
   colorMaterial $= Just (Front, Diffuse)
 
+  glEnable gl_BLEND
+  glBlendFunc gl_SRC_ALPHA gl_ONE_MINUS_SRC_ALPHA
 
 display :: MVar a -> MVar (Maybe SpecialKey) -> MVar Bool -> Camera -> (Maybe SpecialKey -> a -> IO ()) -> DisplayCallback
 display stateMVar keyRef visReadyMVar camera userDrawFun = do

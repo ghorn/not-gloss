@@ -5,7 +5,7 @@ module Vis.VisObject ( VisObject(..)
                      , setPerspectiveMode
                      ) where
 
-import Graphics.Rendering.OpenGL.Raw ( glBegin, glEnd, gl_QUADS, gl_QUAD_STRIP, gl_TRIANGLES, glVertex3f, glVertex3d, glNormal3d, gl_TRIANGLE_FAN, glRasterPos2d ,glRasterPos3d )
+import Graphics.Rendering.OpenGL.Raw
 import qualified Graphics.Gloss.Data.Color as Gloss
 import Graphics.UI.GLUT
 
@@ -137,7 +137,7 @@ drawObject (VisCylinder (height,radius) (Xyz x y z) (Quat q0 q1 q2 q3) col) =
 -- sphere
 drawObject (VisSphere s xyz col) = drawObject $ VisEllipsoid (s,s,s) xyz (Quat 1 0 0 0) col
 
--- sphere
+-- ellipsoid
 drawObject (VisEllipsoid (sx,sy,sz) (Xyz x y z) (Quat q0 q1 q2 q3) col) =
   preservingMatrix $ do
     setMaterialDiffuse col
@@ -181,12 +181,7 @@ drawObject (VisPlane (Xyz x y z) offset col1 col2) =
         eps = 0.01
     translate (Vector3 (offset*x') (offset*y') (offset*z') :: Vector3 GLdouble)
     rotate ((acos z')*180/pi :: GLdouble) (Vector3 (-y') x' 0)
-    mapM_ drawObject $ concat [[ VisLine [Xyz (-r) y0 eps, Xyz r y0 eps] col1
-                               , VisLine [Xyz x0 (-r) eps, Xyz x0 r eps] col1
-                               ] | x0 <- [-r,-r+r/n..r], y0 <- [-r,-r+r/n..r]]
-    mapM_ drawObject $ concat [[ VisLine [Xyz (-r) y0 (-eps), Xyz r y0 (-eps)] col1
-                               , VisLine [Xyz x0 (-r) (-eps), Xyz x0 r (-eps)] col1
-                               ] | x0 <- [-r,-r+r/n..r], y0 <- [-r,-r+r/n..r]]
+
     glBegin gl_QUADS
     setColor col2
 
@@ -196,6 +191,16 @@ drawObject (VisPlane (Xyz x y z) offset col1 col2) =
     glVertex3f (-r')  (-r')  0
     glVertex3f   r'   (-r')  0
     glEnd
+
+    glDisable gl_BLEND
+    mapM_ drawObject $ concat [[ VisLine [Xyz (-r) y0 eps, Xyz r y0 eps] col1
+                               , VisLine [Xyz x0 (-r) eps, Xyz x0 r eps] col1
+                               ] | x0 <- [-r,-r+r/n..r], y0 <- [-r,-r+r/n..r]]
+    mapM_ drawObject $ concat [[ VisLine [Xyz (-r) y0 (-eps), Xyz r y0 (-eps)] col1
+                               , VisLine [Xyz x0 (-r) (-eps), Xyz x0 r (-eps)] col1
+                               ] | x0 <- [-r,-r+r/n..r], y0 <- [-r,-r+r/n..r]]
+    glEnable gl_BLEND
+
 
 -- arrow
 drawObject (VisArrow (size, aspectRatio) (Xyz x0 y0 z0) (Xyz x y z) col) =
