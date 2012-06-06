@@ -22,6 +22,8 @@ setMaterialDiffuse col = materialDiffuse Front $= (glColorOfColor col)
 
 data VisObject a = VisCylinder (a,a) (Xyz a) (Quat a) Gloss.Color
                  | VisBox (a,a,a) (Xyz a) (Quat a) Gloss.Color
+                 | VisEllipsoid (a,a,a) (Xyz a) (Quat a) Gloss.Color
+                 | VisSphere a (Xyz a) Gloss.Color
                  | VisLine [Xyz a] Gloss.Color
                  | VisArrow (a,a) (Xyz a) (Xyz a) Gloss.Color
                  | VisAxes (a,a) (Xyz a) (Quat a)
@@ -35,6 +37,8 @@ data VisObject a = VisCylinder (a,a) (Xyz a) (Quat a) Gloss.Color
 instance Functor VisObject where
   fmap f (VisCylinder (x,y) xyz quat col) = VisCylinder (f x, f y) (fmap f xyz) (fmap f quat) col
   fmap f (VisBox (x,y,z) xyz quat col) = VisBox (f x, f y, f z) (fmap f xyz) (fmap f quat) col
+  fmap f (VisSphere s xyz col) = VisSphere (f s) (fmap f xyz) col
+  fmap f (VisEllipsoid (sx,sy,sz) xyz quat col) = VisEllipsoid (f sx, f sy, f sz) (fmap f xyz) (fmap f quat) col
   fmap f (VisLine xyzs col) = VisLine (map (fmap f) xyzs) col
   fmap f (VisArrow (x,y) xyz0 xyz1 col) = VisArrow (f x, f y) (fmap f xyz0) (fmap f xyz1) col
   fmap f (VisAxes (x,y) xyz quat) = VisAxes (f x, f y) (fmap f xyz) (fmap f quat)
@@ -129,6 +133,21 @@ drawObject (VisCylinder (height,radius) (Xyz x y z) (Quat q0 q1 q2 q3) col) =
           glEnd
 
     mapM_ drawSlices $ zip (init zSteps) (tail zSteps)
+
+-- sphere
+drawObject (VisSphere s xyz col) = drawObject $ VisEllipsoid (s,s,s) xyz (Quat 1 0 0 0) col
+
+-- sphere
+drawObject (VisEllipsoid (sx,sy,sz) (Xyz x y z) (Quat q0 q1 q2 q3) col) =
+  preservingMatrix $ do
+    setMaterialDiffuse col
+    setColor col
+    translate (Vector3 x y z :: Vector3 GLdouble)
+    rotate (2 * acos q0 *180/pi :: GLdouble) (Vector3 q1 q2 q3)
+    normalize $= Enabled
+    scale sx sy sz
+    renderObject Solid (Sphere' 1 20 20)
+    normalize $= Disabled
 
 -- box
 drawObject (VisBox (dx,dy,dz) (Xyz x y z) (Quat q0 q1 q2 q3) col) =
