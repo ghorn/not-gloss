@@ -21,9 +21,9 @@ setMaterialDiffuse :: Gloss.Color -> IO ()
 setMaterialDiffuse col = materialDiffuse Front $= (glColorOfColor col)
 
 data VisObject a = VisCylinder (a,a) (Xyz a) (Quat a) Gloss.Color
-                 | VisBox (a,a,a) (Xyz a) (Quat a) Gloss.Color
-                 | VisEllipsoid (a,a,a) (Xyz a) (Quat a) Gloss.Color
-                 | VisSphere a (Xyz a) Gloss.Color
+                 | VisBox (a,a,a) (Xyz a) (Quat a) Flavour Gloss.Color
+                 | VisEllipsoid (a,a,a) (Xyz a) (Quat a) Flavour Gloss.Color
+                 | VisSphere a (Xyz a) Flavour Gloss.Color
                  | VisLine [Xyz a] Gloss.Color
                  | VisArrow (a,a) (Xyz a) (Xyz a) Gloss.Color
                  | VisAxes (a,a) (Xyz a) (Quat a)
@@ -36,9 +36,9 @@ data VisObject a = VisCylinder (a,a) (Xyz a) (Quat a) Gloss.Color
 
 instance Functor VisObject where
   fmap f (VisCylinder (x,y) xyz quat col) = VisCylinder (f x, f y) (fmap f xyz) (fmap f quat) col
-  fmap f (VisBox (x,y,z) xyz quat col) = VisBox (f x, f y, f z) (fmap f xyz) (fmap f quat) col
-  fmap f (VisSphere s xyz col) = VisSphere (f s) (fmap f xyz) col
-  fmap f (VisEllipsoid (sx,sy,sz) xyz quat col) = VisEllipsoid (f sx, f sy, f sz) (fmap f xyz) (fmap f quat) col
+  fmap f (VisBox (x,y,z) xyz quat flav col) = VisBox (f x, f y, f z) (fmap f xyz) (fmap f quat) flav col
+  fmap f (VisSphere s xyz flav col) = VisSphere (f s) (fmap f xyz) flav col
+  fmap f (VisEllipsoid (sx,sy,sz) xyz quat flav col) = VisEllipsoid (f sx, f sy, f sz) (fmap f xyz) (fmap f quat) flav col
   fmap f (VisLine xyzs col) = VisLine (map (fmap f) xyzs) col
   fmap f (VisArrow (x,y) xyz0 xyz1 col) = VisArrow (f x, f y) (fmap f xyz0) (fmap f xyz1) col
   fmap f (VisAxes (x,y) xyz quat) = VisAxes (f x, f y) (fmap f xyz) (fmap f quat)
@@ -135,10 +135,10 @@ drawObject (VisCylinder (height,radius) (Xyz x y z) (Quat q0 q1 q2 q3) col) =
     mapM_ drawSlices $ zip (init zSteps) (tail zSteps)
 
 -- sphere
-drawObject (VisSphere s xyz col) = drawObject $ VisEllipsoid (s,s,s) xyz (Quat 1 0 0 0) col
+drawObject (VisSphere s xyz flav col) = drawObject $ VisEllipsoid (s,s,s) xyz (Quat 1 0 0 0) flav col
 
 -- ellipsoid
-drawObject (VisEllipsoid (sx,sy,sz) (Xyz x y z) (Quat q0 q1 q2 q3) col) =
+drawObject (VisEllipsoid (sx,sy,sz) (Xyz x y z) (Quat q0 q1 q2 q3) flav col) =
   preservingMatrix $ do
     setMaterialDiffuse col
     setColor col
@@ -146,11 +146,11 @@ drawObject (VisEllipsoid (sx,sy,sz) (Xyz x y z) (Quat q0 q1 q2 q3) col) =
     rotate (2 * acos q0 *180/pi :: GLdouble) (Vector3 q1 q2 q3)
     normalize $= Enabled
     scale sx sy sz
-    renderObject Solid (Sphere' 1 20 20)
+    renderObject flav (Sphere' 1 20 20)
     normalize $= Disabled
 
 -- box
-drawObject (VisBox (dx,dy,dz) (Xyz x y z) (Quat q0 q1 q2 q3) col) =
+drawObject (VisBox (dx,dy,dz) (Xyz x y z) (Quat q0 q1 q2 q3) flav col) =
   preservingMatrix $ do
     setMaterialDiffuse col
     setColor col
@@ -158,7 +158,7 @@ drawObject (VisBox (dx,dy,dz) (Xyz x y z) (Quat q0 q1 q2 q3) col) =
     rotate (2 * acos q0 *180/pi :: GLdouble) (Vector3 q1 q2 q3)
     normalize $= Enabled
     scale dx dy dz
-    renderObject Solid (Cube 1)
+    renderObject flav (Cube 1)
     normalize $= Disabled
 
 -- line

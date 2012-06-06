@@ -21,15 +21,15 @@ drawFun :: Maybe SpecialKey -> State Double -> [VisObject Double]
 drawFun key (State (x,_) quat) = [axes,box,ellipsoid,sphere] ++ (map text [-5..5]) ++ [boxText, plane] 
   where
     axes = VisAxes (0.5, 15) (Xyz 0 0 0) (Quat 1 0 0 0)
-    sphere = VisSphere 0.15 (Xyz 0 x (-1)) col
+    sphere = VisSphere 0.15 (Xyz 0 x (-1)) Wireframe col
       where
         col = case key of Nothing -> makeColor 0.2 0.3 0.8 1
                           _       -> makeColor 0.2 0.3 0.8 0.4
-    ellipsoid = VisEllipsoid (0.2, 0.3, 0.4) (Xyz x 0 (-1)) quat col
+    ellipsoid = VisEllipsoid (0.2, 0.3, 0.4) (Xyz x 0 (-1)) quat Solid col
       where
         col = case key of Nothing -> makeColor 1 0.3 0.5 1
                           _       -> makeColor 1 0.3 0.5 0.3
-    box = VisBox (0.2, 0.2, 0.2) (Xyz 0 0 x) quat col
+    box = VisBox (0.2, 0.2, 0.2) (Xyz 0 0 x) quat Wireframe col
       where
         col = case key of Nothing -> makeColor 0 1 1 1
                           _       -> makeColor 0 1 1 0.2

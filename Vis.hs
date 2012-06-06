@@ -5,6 +5,7 @@ module Vis ( vis
            , Camera0(..)
            , SpecialKey(..)
            , BitmapFont(..)
+           , Flavour(..)
            , module Graphics.Gloss.Data.Color
            ) where
 
