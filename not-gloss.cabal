@@ -37,17 +37,6 @@ library
 
   ghc-options:
 
-executable not-gloss-example
-  main-is:             Example.hs
-  build-depends:       base == 4.5.*,
-                       GLUT == 2.3.*,
-                       spatial-math >= 0.1.2 && < 0.2,
-                       OpenGLRaw == 1.2.*,
-                       time == 1.4.*,
-                       gloss >= 1.7.4 && < 1.7.5,
-                       not-gloss
-  ghc-options:         -threaded
-
 source-repository head
   type:     git
   location: git://github.com/ghorn/not-gloss.git

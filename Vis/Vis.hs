@@ -1,6 +1,7 @@
 {-# OPTIONS_GHC -Wall #-}
 
 module Vis.Vis ( vis
+               , FullState
                ) where
 
 import Data.IORef ( newIORef )
@@ -13,6 +14,9 @@ import Graphics.Rendering.OpenGL.Raw
 
 import Vis.Camera ( Camera(..) , makeCamera, Camera0(..) )
 import Vis.VisObject ( VisObject(..), drawObjects, setPerspectiveMode )
+
+-- user state and internal states
+type FullState a = (a, Float)
 
 myGlInit :: String -> IO ()
 myGlInit progName = do
@@ -57,7 +61,7 @@ setCamera camera = do
     zc = z0 - rho'*sin(theta'*pi/180)
   lookAt (Vertex3 xc yc zc) (Vertex3 x0 y0 z0) (Vector3 0 0 (-1))
 
-myDisplayCallback :: MVar a -> MVar (Maybe SpecialKey) -> MVar Bool -> IO () -> (Maybe SpecialKey -> a -> IO ()) -> DisplayCallback
+myDisplayCallback :: MVar (FullState a) -> MVar (Maybe SpecialKey) -> MVar Bool -> IO () -> (Maybe SpecialKey -> FullState a -> IO ()) -> DisplayCallback
 myDisplayCallback stateMVar keyRef visReadyMVar setCameraFun userDrawFun = do
    clear [ ColorBuffer, DepthBuffer ]
    
@@ -159,14 +163,15 @@ motion camera (Position x y) = do
    postRedisplay Nothing
 
 
-vis :: Real b => Camera0 -> (Maybe SpecialKey -> a -> IO a) -> (Maybe SpecialKey -> a -> [VisObject b]) -> a -> Double -> IO ()
+vis :: Real b => Camera0 -> (Maybe SpecialKey -> FullState a -> IO a) -> (Maybe SpecialKey -> FullState a -> [VisObject b]) -> a -> Double -> IO ()
 vis camera0 userSimFun userDrawFun x0 ts = do
   -- init glut/scene
   (progName, _args) <- getArgsAndInitialize
   myGlInit progName
    
   -- create internal state
-  stateMVar <- newMVar x0
+  let fullState0 = (x0, 0)
+  stateMVar <- newMVar fullState0
   camera <- makeCamera camera0
   visReadyMVar <- newMVar False
   latestKey <- newMVar Nothing
@@ -184,7 +189,7 @@ vis camera0 userSimFun userDrawFun x0 ts = do
   mainLoop
 
 
-simThread :: MVar a -> MVar Bool -> (Maybe SpecialKey -> a -> IO a) -> Double -> MVar (Maybe SpecialKey) -> IO ()
+simThread :: MVar (FullState a) -> MVar Bool -> (Maybe SpecialKey -> FullState a -> IO a) -> Double -> MVar (Maybe SpecialKey) -> IO ()
 simThread stateMVar visReadyMVar userSimFun ts keyRef = do
   let waitUntilDisplayIsReady :: IO ()
       waitUntilDisplayIsReady = do 
@@ -204,7 +209,8 @@ simThread stateMVar visReadyMVar userSimFun ts keyRef = do
     lastTime <- get lastTimeRef
     let usRemaining :: Int
         usRemaining = round $ 1e6*(ts - realToFrac (diffUTCTime currentTime lastTime))
-
+        secondsSinceStart = realToFrac (diffUTCTime currentTime t0)
+    
     if usRemaining <= 0
       -- slept for long enough, do a sim iteration
       then do
@@ -215,7 +221,7 @@ simThread stateMVar visReadyMVar userSimFun ts keyRef = do
               latestKey <- readMVar keyRef
               userSimFun latestKey state
 
-        let putState = swapMVar stateMVar
+        let putState x = swapMVar stateMVar (x, secondsSinceStart)
 
         nextState <- getNextState
         _ <- nextState `seq` putState nextState
@@ -224,4 +230,3 @@ simThread stateMVar visReadyMVar userSimFun ts keyRef = do
        
       -- need to sleep longer
       else threadDelay usRemaining
-           
