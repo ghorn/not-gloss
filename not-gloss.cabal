@@ -23,6 +23,7 @@ library
   exposed-modules:     Vis
                        Vis.Camera
                        Vis.Interface
+                       Vis.Vis
                        Vis.VisObject
 
   other-modules:       
