@@ -163,7 +163,7 @@ motion camera (Position x y) = do
    postRedisplay Nothing
 
 
-vis :: Real b => Camera0 -> (Maybe SpecialKey -> FullState a -> IO a) -> (Maybe SpecialKey -> FullState a -> [VisObject b]) -> a -> Double -> IO ()
+vis :: Real b => Camera0 -> (Maybe SpecialKey -> FullState a -> IO a) -> (Maybe SpecialKey -> FullState a -> IO (VisObject b)) -> a -> Double -> IO ()
 vis camera0 userSimFun userDrawFun x0 ts = do
   -- init glut/scene
   (progName, _args) <- getArgsAndInitialize
@@ -180,7 +180,10 @@ vis camera0 userSimFun userDrawFun x0 ts = do
   _ <- forkIO $ simThread stateMVar visReadyMVar userSimFun ts latestKey
   
   -- setup callbacks
-  displayCallback $= myDisplayCallback stateMVar latestKey visReadyMVar (setCamera camera) (\x y -> drawObjects $ map (fmap realToFrac) (userDrawFun x y))
+  let makePictures x y = do
+        visobs <- userDrawFun x y
+        drawObjects $ (fmap realToFrac) visobs
+  displayCallback $= myDisplayCallback stateMVar latestKey visReadyMVar (setCamera camera) makePictures
   reshapeCallback $= Just reshape
   keyboardMouseCallback $= Just (keyboardMouse camera latestKey)
   motionCallback $= Just (motion camera)

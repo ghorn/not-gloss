@@ -20,7 +20,8 @@ setColor = color . glColorOfColor
 setMaterialDiffuse :: Gloss.Color -> IO ()
 setMaterialDiffuse col = materialDiffuse Front $= (glColorOfColor col)
 
-data VisObject a = VisCylinder (a,a) (Xyz a) (Quat a) Gloss.Color
+data VisObject a = VisObjects [VisObject a]
+                 | VisCylinder (a,a) (Xyz a) (Quat a) Gloss.Color
                  | VisBox (a,a,a) (Xyz a) (Quat a) Flavour Gloss.Color
                  | VisEllipsoid (a,a,a) (Xyz a) (Quat a) Flavour Gloss.Color
                  | VisSphere a (Xyz a) Flavour Gloss.Color
@@ -35,6 +36,7 @@ data VisObject a = VisCylinder (a,a) (Xyz a) (Quat a) Gloss.Color
                  | Vis2dText String (a,a) BitmapFont Gloss.Color
 
 instance Functor VisObject where
+  fmap f (VisObjects xs) = VisObjects $ map (fmap f) xs
   fmap f (VisCylinder (x,y) xyz quat col) = VisCylinder (f x, f y) (fmap f xyz) (fmap f quat) col
   fmap f (VisBox (x,y,z) xyz quat flav col) = VisBox (f x, f y, f z) (fmap f xyz) (fmap f quat) flav col
   fmap f (VisSphere s xyz flav col) = VisSphere (f s) (fmap f xyz) flav col
@@ -57,13 +59,15 @@ setPerspectiveMode = do
   perspective 40 (fromIntegral w / fromIntegral h) 0.1 100
   matrixMode $= Modelview 0
 
-
-drawObjects :: [VisObject GLdouble] -> IO ()
+drawObjects :: VisObject GLdouble -> IO ()
 drawObjects objects = do
   setPerspectiveMode
-  mapM_ drawObject objects
+  drawObject objects
 
 drawObject :: VisObject GLdouble -> IO ()
+-- list of objects
+drawObject (VisObjects xs) = mapM_ drawObject xs
+
 -- triangle
 drawObject (VisTriangle (Xyz x0 y0 z0) (Xyz x1 y1 z1) (Xyz x2 y2 z2) col) =
   preservingMatrix $ do
@@ -233,7 +237,7 @@ drawObject (VisAxes (size, aspectRatio) (Xyz x0 y0 z0) (Quat q0 q1 q2 q3)) = pre
   let xAxis = VisArrow (size, aspectRatio) (Xyz 0 0 0) (Xyz 1 0 0) (Gloss.makeColor 1 0 0 1)
       yAxis = VisArrow (size, aspectRatio) (Xyz 0 0 0) (Xyz 0 1 0) (Gloss.makeColor 0 1 0 1)
       zAxis = VisArrow (size, aspectRatio) (Xyz 0 0 0) (Xyz 0 0 1) (Gloss.makeColor 0 0 1 1)
-  drawObjects [xAxis, yAxis, zAxis]
+  drawObject $ VisObjects [xAxis, yAxis, zAxis]
 
 drawObject (VisCustom f) = preservingMatrix f
 
