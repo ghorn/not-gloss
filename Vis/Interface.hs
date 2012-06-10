@@ -7,9 +7,10 @@ module Vis.Interface ( display
                      , simulateIO
                      ) where
 
-import Vis.Camera ( Camera0(..) )
-import Vis.VisObject ( VisObject(..) )
 import Vis.Vis ( vis )
+import Vis.Camera ( makeCamera, Camera0(..), setCamera, cameraMotion, cameraKeyboardMouse )
+import Vis.VisObject ( VisObject(..) )
+
 
 -- | draw a static image
 display :: Real b => VisObject b -> IO ()
@@ -19,30 +20,40 @@ display visobjects = animate (\_ -> visobjects)
 animate :: Real b => (Float -> VisObject b) -> IO ()
 animate userDrawFun = animateIO (return . userDrawFun)
 
--- | display an animation
+-- | display an animation impurely
 animateIO :: Real b => (Float -> IO (VisObject b)) -> IO ()
-animateIO userDrawFun = vis camera0 simFun drawFun state0 ts
+animateIO userDrawFun =
+  vis ts (userState0, cameraState0) simFun drawFun setCameraFun kmCallback motionCallback
   where
     ts = 0.01
-    state0 = ()
-    drawFun _ (_,time) = userDrawFun time
-    simFun _ _ = return ()
-    camera0 = Camera0 { phi0 = 60
-                      , theta0 = 20
-                      , rho0 = 7}
-  
+    userState0 = ()
+    cameraState0 = makeCamera $ Camera0 { phi0 = 60
+                                        , theta0 = 20
+                                        , rho0 = 7}
+    drawFun (_,time) = userDrawFun time
+    simFun (state,_) = return state
+    kmCallback (state, camState) k0 k1 = (state, cameraKeyboardMouse camState k0 k1)
+    motionCallback (state, cameraState) pos = (state, cameraMotion cameraState pos)
+    setCameraFun (_,cameraState) = setCamera cameraState
+
 
 -- | run a simulation
 simulate :: Real b => Double -> world -> (world -> VisObject b) -> (Float -> world -> world) -> IO ()
 simulate ts state0 userDrawFun userSimFun =
   simulateIO ts state0 (return . userDrawFun) (\t -> return . (userSimFun t))
 
--- | run a simulation
+-- | run a simulation impurely
 simulateIO :: Real b => Double -> world -> (world -> IO (VisObject b)) -> (Float -> world -> IO world) -> IO ()
-simulateIO ts state0 userDrawFun userSimFun = vis camera0 simFun drawFun state0 ts
+simulateIO ts userState0 userDrawFun userSimFun =
+  vis ts (userState0, cameraState0) simFun drawFun setCameraFun kmCallback motionCallback
   where
-    drawFun _ (state,_) = userDrawFun state
-    simFun _ (state,time) = userSimFun time state
-    camera0 = Camera0 { phi0 = 60
-                      , theta0 = 20
-                      , rho0 = 7}
+    drawFun ((userState, _),_) = userDrawFun userState
+    simFun ((userState,cameraState),time) = do
+      nextUserState <- userSimFun time userState
+      return (nextUserState, cameraState)
+    cameraState0 = makeCamera $ Camera0 { phi0 = 60
+                                        , theta0 = 20
+                                        , rho0 = 7}
+    kmCallback (state, camState) k0 k1 = (state, cameraKeyboardMouse camState k0 k1)
+    motionCallback (state, cameraState) pos = (state, cameraMotion cameraState pos)
+    setCameraFun (_,cameraState) = setCamera cameraState

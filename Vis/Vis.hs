@@ -8,11 +8,10 @@ import Data.IORef ( newIORef )
 import System.Exit ( exitSuccess )
 import Data.Time.Clock ( getCurrentTime, diffUTCTime, addUTCTime )
 import Control.Concurrent ( MVar, readMVar, swapMVar, newMVar, forkIO, threadDelay )
-import Control.Monad ( when, unless, forever )
+import Control.Monad ( unless, forever )
 import Graphics.UI.GLUT
 import Graphics.Rendering.OpenGL.Raw
 
-import Vis.Camera ( Camera(..) , makeCamera, Camera0(..) )
 import Vis.VisObject ( VisObject(..), drawObjects, setPerspectiveMode )
 
 -- user state and internal states
@@ -47,22 +46,8 @@ myGlInit progName = do
   glEnable gl_BLEND
   glBlendFunc gl_SRC_ALPHA gl_ONE_MINUS_SRC_ALPHA
 
-setCamera :: Camera -> IO ()
-setCamera camera = do
-  x0     <- get (x0c    camera)
-  y0     <- get (y0c    camera)
-  z0     <- get (z0c    camera)
-  phi'   <- get (phi   camera)
-  theta' <- get (theta camera)
-  rho'   <- get (rho   camera)
-  let
-    xc = x0 + rho'*cos(phi'*pi/180)*cos(theta'*pi/180)
-    yc = y0 + rho'*sin(phi'*pi/180)*cos(theta'*pi/180)
-    zc = z0 - rho'*sin(theta'*pi/180)
-  lookAt (Vertex3 xc yc zc) (Vertex3 x0 y0 z0) (Vector3 0 0 (-1))
-
-myDisplayCallback :: MVar (FullState a) -> MVar (Maybe SpecialKey) -> MVar Bool -> IO () -> (Maybe SpecialKey -> FullState a -> IO ()) -> DisplayCallback
-myDisplayCallback stateMVar keyRef visReadyMVar setCameraFun userDrawFun = do
+drawScene :: MVar (FullState a) -> MVar Bool -> IO () -> (FullState a -> IO ()) -> DisplayCallback
+drawScene stateMVar visReadyMVar setCameraFun userDrawFun = do
    clear [ ColorBuffer, DepthBuffer ]
    
    -- draw the scene
@@ -72,8 +57,7 @@ myDisplayCallback stateMVar keyRef visReadyMVar setCameraFun userDrawFun = do
      
      -- call user function
      state <- readMVar stateMVar
-     latestKey <- readMVar keyRef
-     userDrawFun latestKey state
+     userDrawFun state
 
    flush
    swapBuffers
@@ -88,83 +72,17 @@ reshape size@(Size _ _) = do
    loadIdentity
    postRedisplay Nothing
 
-keyboardMouse :: Camera -> MVar (Maybe SpecialKey) -> KeyboardMouseCallback
-keyboardMouse camera keyRef key keyState _ _ =
-  case (key, keyState) of
-    -- kill sim thread when main loop finishes
-    (Char '\27', Down) -> exitSuccess
 
-    -- set keyRef
-    (SpecialKey k, Down)   -> do
-      _ <- swapMVar keyRef (Just k)
-      return ()
-    (SpecialKey _, Up)   -> do
-      _ <- swapMVar keyRef Nothing
-      return ()
-
-    -- adjust camera
-    (MouseButton LeftButton, Down) -> do 
-      resetMotion
-      leftButton camera $= 1
-    (MouseButton LeftButton, Up) -> leftButton camera $= 0
-    (MouseButton RightButton, Down) -> do 
-      resetMotion
-      rightButton camera $= 1
-    (MouseButton RightButton, Up) -> rightButton camera $= 0
-      
-    (MouseButton WheelUp, Down) -> zoom 0.9
-    (MouseButton WheelDown, Down) -> zoom 1.1
-    
-    _ -> return ()
-    where resetMotion = do
-            ballX camera $= -1
-            ballY camera $= -1
-
-          zoom factor = do
-            rho camera $~ (* factor)
-            postRedisplay Nothing
-            
-
-motion :: Camera -> MotionCallback
-motion camera (Position x y) = do
-   x0  <- get (x0c camera)
-   y0  <- get (y0c camera)
-   bx  <- get (ballX camera)
-   by  <- get (ballY camera)
-   phi' <- get (phi camera)
-   theta' <- get (theta camera)
-   rho' <- get (rho camera)
-   lb <- get (leftButton camera)
-   rb <- get (rightButton camera)
-   let deltaX
-         | bx == -1  = 0
-         | otherwise = fromIntegral (x - bx)
-       deltaY
-         | by == -1  = 0
-         | otherwise = fromIntegral (y - by)
-       nextTheta 
-         | deltaY + theta' >  80 =  80
-         | deltaY + theta' < -80 = -80
-         | otherwise             = deltaY + theta'
-       nextX0 = x0 + 0.003*rho'*( -sin(phi'*pi/180)*deltaX - cos(phi'*pi/180)*deltaY)
-       nextY0 = y0 + 0.003*rho'*(  cos(phi'*pi/180)*deltaX - sin(phi'*pi/180)*deltaY)
-       
-   when (lb == 1) $ do
-     phi   camera $~ (+ deltaX)
-     theta camera $= nextTheta
-   
-   when (rb == 1) $ do
-     x0c camera $= nextX0
-     y0c camera $= nextY0
-   
-   ballX camera $= x
-   ballY camera $= y
-   
-   postRedisplay Nothing
-
-
-vis :: Real b => Camera0 -> (Maybe SpecialKey -> FullState a -> IO a) -> (Maybe SpecialKey -> FullState a -> IO (VisObject b)) -> a -> Double -> IO ()
-vis camera0 userSimFun userDrawFun x0 ts = do
+vis :: Real b =>
+       Double -- ^ sample time
+       -> a -- ^ initial state
+       -> (FullState a -> IO a)  -- ^ sim function
+       -> (FullState a -> IO (VisObject b)) -- ^ draw function
+       -> (a -> IO ()) -- ^ set camera function
+       -> (a -> Key -> KeyState -> a) -- ^ keyboard/mouse callback
+       -> (a -> Position -> a) -- ^ motion callback
+       -> IO ()
+vis ts x0 userSimFun userDraw userSetCamera userKeyMouseCallback userMotionCallback = do
   -- init glut/scene
   (progName, _args) <- getArgsAndInitialize
   myGlInit progName
@@ -172,28 +90,45 @@ vis camera0 userSimFun userDrawFun x0 ts = do
   -- create internal state
   let fullState0 = (x0, 0)
   stateMVar <- newMVar fullState0
-  camera <- makeCamera camera0
   visReadyMVar <- newMVar False
-  latestKey <- newMVar Nothing
 
   -- start sim thread
-  _ <- forkIO $ simThread stateMVar visReadyMVar userSimFun ts latestKey
+  _ <- forkIO $ simThread stateMVar visReadyMVar userSimFun ts
   
-  -- setup callbacks
-  let makePictures x y = do
-        visobs <- userDrawFun x y
+  -- setup the callbacks
+  let makePictures x = do
+        visobs <- userDraw x
         drawObjects $ (fmap realToFrac) visobs
-  displayCallback $= myDisplayCallback stateMVar latestKey visReadyMVar (setCamera camera) makePictures
+
+      setCamera = do
+        (state,_) <- readMVar stateMVar
+        userSetCamera state
+
+      -- kill sim thread when someone hits ESC
+      exitOverride key keyState _ _ = case (key, keyState) of
+        (Char '\27', Down) -> exitSuccess
+        _ -> do (state0',time) <- readMVar stateMVar
+                let state1 = userKeyMouseCallback state0' key keyState
+                _ <- state1 `seq` swapMVar stateMVar (state1, time)
+                postRedisplay Nothing
+
+      motionCallback' pos = do
+        (state0',ts') <- readMVar stateMVar
+        let state1 = userMotionCallback state0' pos
+        _ <- state1 `seq` swapMVar stateMVar (state1,ts')
+        postRedisplay Nothing
+
+  displayCallback $= drawScene stateMVar visReadyMVar setCamera makePictures
   reshapeCallback $= Just reshape
-  keyboardMouseCallback $= Just (keyboardMouse camera latestKey)
-  motionCallback $= Just (motion camera)
+  keyboardMouseCallback $= Just exitOverride
+  motionCallback $= Just motionCallback'
 
   -- start main loop
   mainLoop
 
 
-simThread :: MVar (FullState a) -> MVar Bool -> (Maybe SpecialKey -> FullState a -> IO a) -> Double -> MVar (Maybe SpecialKey) -> IO ()
-simThread stateMVar visReadyMVar userSimFun ts keyRef = do
+simThread :: MVar (FullState a) -> MVar Bool -> (FullState a -> IO a) -> Double -> IO ()
+simThread stateMVar visReadyMVar userSimFun ts = do
   let waitUntilDisplayIsReady :: IO ()
       waitUntilDisplayIsReady = do 
         visReady <- readMVar visReadyMVar
@@ -221,10 +156,8 @@ simThread stateMVar visReadyMVar userSimFun ts keyRef = do
 
         let getNextState = do
               state <- readMVar stateMVar
-              latestKey <- readMVar keyRef
-              userSimFun latestKey state
-
-        let putState x = swapMVar stateMVar (x, secondsSinceStart)
+              userSimFun state
+            putState x = swapMVar stateMVar (x, secondsSinceStart)
 
         nextState <- getNextState
         _ <- nextState `seq` putState nextState
