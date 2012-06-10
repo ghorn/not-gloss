@@ -9,7 +9,7 @@ module Vis.Interface ( display
                      , playIO
                      ) where
 
-import Graphics.UI.GLUT ( Key, KeyState, Position, Modifiers )
+import Graphics.UI.GLUT ( Key, KeyState, Position, Modifiers, Cursor(..) )
 
 import Vis.Vis ( vis )
 import Vis.Camera ( makeCamera, Camera0(..), setCamera, cameraMotion, cameraKeyboardMouse )
@@ -34,7 +34,9 @@ animateIO userDrawFun =
     cameraState0 = makeCamera $ Camera0 { phi0 = 60
                                         , theta0 = 20
                                         , rho0 = 7}
-    drawFun (_,time) = userDrawFun time
+    drawFun (_,time) = do
+      obs <- userDrawFun time
+      return (obs, Nothing)
     simFun (state,_) = return state
     kmCallback (state, camState) k0 k1 _ _ = (state, cameraKeyboardMouse camState k0 k1)
     motionCallback (state, cameraState) pos = (state, cameraMotion cameraState pos)
@@ -61,7 +63,10 @@ simulateIO :: Real b =>
 simulateIO ts userState0 userDrawFun userSimFun =
   vis ts (userState0, cameraState0) simFun drawFun setCameraFun (Just kmCallback) (Just motionCallback) Nothing
   where
-    drawFun ((userState, _),_) = userDrawFun userState
+    drawFun ((userState, _),_) = do
+      obs <- userDrawFun userState
+      return (obs, Nothing)
+
     simFun ((userState,cameraState),time) = do
       nextUserState <- userSimFun time userState
       return (nextUserState, cameraState)
@@ -77,7 +82,7 @@ simulateIO ts userState0 userDrawFun userSimFun =
 play :: Real b =>
         Double -- ^ sample time
         -> world -- ^ initial state
-        -> (world -> (VisObject b)) -- ^ draw function
+        -> (world -> (VisObject b, Maybe Cursor)) -- ^ draw function, can give a different cursor
         -> (Float -> world -> world) -- ^ state propogation function (takes current time and state as inputs)
         -> (world -> IO ()) -- ^ set where camera looks
         -> Maybe (world -> Key -> KeyState -> Modifiers -> Position -> world) -- ^ keyboard/mouse press callback
@@ -95,7 +100,7 @@ play ts userState0 userDrawFun userSimFun =
 playIO :: Real b =>
           Double -- ^ sample time
           -> world -- ^ initial state
-          -> (world -> IO (VisObject b)) -- ^ draw function
+          -> (world -> IO (VisObject b, Maybe Cursor)) -- ^ draw function, can give a different cursor
           -> (Float -> world -> IO world) -- ^ state propogation function (takes current time and state as inputs)
           -> (world -> IO ()) -- ^ set where camera looks
           -> Maybe (world -> Key -> KeyState -> Modifiers -> Position -> world) -- ^ keyboard/mouse press callback

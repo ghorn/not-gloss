@@ -7,7 +7,7 @@ module Vis.Vis ( vis
 import Data.IORef ( newIORef )
 import System.Exit ( exitSuccess )
 import Data.Time.Clock ( getCurrentTime, diffUTCTime, addUTCTime )
-import Control.Concurrent ( MVar, readMVar, swapMVar, newMVar, forkIO, threadDelay )
+import Control.Concurrent ( MVar, readMVar, swapMVar, newMVar, takeMVar, putMVar, forkIO, threadDelay )
 import Control.Monad ( unless, forever )
 import Graphics.UI.GLUT
 import Graphics.Rendering.OpenGL.Raw
@@ -77,15 +77,17 @@ vis :: Real b =>
        Double -- ^ sample time
        -> a   -- ^ initial state
        -> (FullState a -> IO a)             -- ^ sim function
-       -> (FullState a -> IO (VisObject b)) -- ^ draw function
+       -> (FullState a -> IO (VisObject b, Maybe Cursor)) -- ^ draw function, can give a different cursor
        -> (a -> IO ())                      -- ^ set camera function
        -> Maybe (a -> Key -> KeyState -> Modifiers -> Position -> a) -- ^ keyboard/mouse callback
        -> Maybe (a -> Position -> a)              -- ^ motion callback
        -> Maybe (a -> Position -> a)              -- ^ passive motion callback
        -> IO ()
-vis ts x0 userSimFun userDraw userSetCamera userKeyMouseCallback userMotionCallback userPassiveMotionCallback = do
+vis ts x0 userSimFun userDraw userSetCamera
+  userKeyMouseCallback userMotionCallback userPassiveMotionCallback = do
   -- init glut/scene
-  (progName, _args) <- getArgsAndInitialize
+  (progName, _) <- getArgsAndInitialize
+  
   myGlInit progName
    
   -- create internal state
@@ -98,8 +100,10 @@ vis ts x0 userSimFun userDraw userSetCamera userKeyMouseCallback userMotionCallb
   
   -- setup the callbacks
   let makePictures x = do
-        visobs <- userDraw x
+        (visobs,cursor') <- userDraw x
         drawObjects $ (fmap realToFrac) visobs
+        case cursor' of Nothing -> return ()
+                        Just cursor'' -> cursor $= cursor''
 
       setCamera = do
         (state,_) <- readMVar stateMVar
@@ -111,25 +115,22 @@ vis ts x0 userSimFun userDraw userSetCamera userKeyMouseCallback userMotionCallb
         _ -> case userKeyMouseCallback of
           Nothing -> return ()
           Just cb -> do
-            (state0',time) <- readMVar stateMVar
-            let state1 = cb state0' k0 k1 k2 k3
-            _ <- state1 `seq` swapMVar stateMVar (state1, time)
+            (state0',time) <- takeMVar stateMVar
+            putMVar stateMVar (cb state0' k0 k1 k2 k3, time)
             postRedisplay Nothing
 
       motionCallback' pos = case userMotionCallback of
         Nothing -> return ()
         Just cb -> do
-          (state0',ts') <- readMVar stateMVar
-          let state1 = cb state0' pos
-          _ <- state1 `seq` swapMVar stateMVar (state1,ts')
+          (state0',ts') <- takeMVar stateMVar
+          putMVar stateMVar (cb state0' pos, ts')
           postRedisplay Nothing
 
       passiveMotionCallback' pos = case userPassiveMotionCallback of
         Nothing -> return ()
         Just cb -> do
-          (state0',ts') <- readMVar stateMVar
-          let state1 = cb state0' pos
-          _ <- state1 `seq` swapMVar stateMVar (state1,ts')
+          (state0',ts') <- takeMVar stateMVar
+          putMVar stateMVar (cb state0' pos, ts')
           postRedisplay Nothing
 
   displayCallback $= drawScene stateMVar visReadyMVar setCamera makePictures
@@ -140,7 +141,6 @@ vis ts x0 userSimFun userDraw userSetCamera userKeyMouseCallback userMotionCallb
 
   -- start main loop
   mainLoop
-
 
 simThread :: MVar (FullState a) -> MVar Bool -> (FullState a -> IO a) -> Double -> IO ()
 simThread stateMVar visReadyMVar userSimFun ts = do
