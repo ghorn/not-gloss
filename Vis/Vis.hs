@@ -75,14 +75,15 @@ reshape size@(Size _ _) = do
 
 vis :: Real b =>
        Double -- ^ sample time
-       -> a -- ^ initial state
-       -> (FullState a -> IO a)  -- ^ sim function
+       -> a   -- ^ initial state
+       -> (FullState a -> IO a)             -- ^ sim function
        -> (FullState a -> IO (VisObject b)) -- ^ draw function
-       -> (a -> IO ()) -- ^ set camera function
-       -> (a -> Key -> KeyState -> a) -- ^ keyboard/mouse callback
-       -> (a -> Position -> a) -- ^ motion callback
+       -> (a -> IO ())                      -- ^ set camera function
+       -> Maybe (a -> Key -> KeyState -> Modifiers -> Position -> a) -- ^ keyboard/mouse callback
+       -> Maybe (a -> Position -> a)              -- ^ motion callback
+       -> Maybe (a -> Position -> a)              -- ^ passive motion callback
        -> IO ()
-vis ts x0 userSimFun userDraw userSetCamera userKeyMouseCallback userMotionCallback = do
+vis ts x0 userSimFun userDraw userSetCamera userKeyMouseCallback userMotionCallback userPassiveMotionCallback = do
   -- init glut/scene
   (progName, _args) <- getArgsAndInitialize
   myGlInit progName
@@ -105,23 +106,37 @@ vis ts x0 userSimFun userDraw userSetCamera userKeyMouseCallback userMotionCallb
         userSetCamera state
 
       -- kill sim thread when someone hits ESC
-      exitOverride key keyState _ _ = case (key, keyState) of
+      exitOverride k0 k1 k2 k3 = case (k0,k1) of
         (Char '\27', Down) -> exitSuccess
-        _ -> do (state0',time) <- readMVar stateMVar
-                let state1 = userKeyMouseCallback state0' key keyState
-                _ <- state1 `seq` swapMVar stateMVar (state1, time)
-                postRedisplay Nothing
+        _ -> case userKeyMouseCallback of
+          Nothing -> return ()
+          Just cb -> do
+            (state0',time) <- readMVar stateMVar
+            let state1 = cb state0' k0 k1 k2 k3
+            _ <- state1 `seq` swapMVar stateMVar (state1, time)
+            postRedisplay Nothing
 
-      motionCallback' pos = do
-        (state0',ts') <- readMVar stateMVar
-        let state1 = userMotionCallback state0' pos
-        _ <- state1 `seq` swapMVar stateMVar (state1,ts')
-        postRedisplay Nothing
+      motionCallback' pos = case userMotionCallback of
+        Nothing -> return ()
+        Just cb -> do
+          (state0',ts') <- readMVar stateMVar
+          let state1 = cb state0' pos
+          _ <- state1 `seq` swapMVar stateMVar (state1,ts')
+          postRedisplay Nothing
+
+      passiveMotionCallback' pos = case userPassiveMotionCallback of
+        Nothing -> return ()
+        Just cb -> do
+          (state0',ts') <- readMVar stateMVar
+          let state1 = cb state0' pos
+          _ <- state1 `seq` swapMVar stateMVar (state1,ts')
+          postRedisplay Nothing
 
   displayCallback $= drawScene stateMVar visReadyMVar setCamera makePictures
   reshapeCallback $= Just reshape
   keyboardMouseCallback $= Just exitOverride
   motionCallback $= Just motionCallback'
+  passiveMotionCallback $= Just passiveMotionCallback'
 
   -- start main loop
   mainLoop
