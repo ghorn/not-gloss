@@ -26,6 +26,7 @@ data VisObject a = VisObjects [VisObject a]
                  | VisEllipsoid (a,a,a) (Xyz a) (Quat a) Flavour Gloss.Color
                  | VisSphere a (Xyz a) Flavour Gloss.Color
                  | VisLine [Xyz a] Gloss.Color
+                 | VisLine' [(Xyz a,Gloss.Color)]
                  | VisArrow (a,a) (Xyz a) (Xyz a) Gloss.Color
                  | VisAxes (a,a) (Xyz a) (Quat a)
                  | VisPlane (Xyz a) a Gloss.Color Gloss.Color
@@ -42,6 +43,7 @@ instance Functor VisObject where
   fmap f (VisSphere s xyz flav col) = VisSphere (f s) (fmap f xyz) flav col
   fmap f (VisEllipsoid (sx,sy,sz) xyz quat flav col) = VisEllipsoid (f sx, f sy, f sz) (fmap f xyz) (fmap f quat) flav col
   fmap f (VisLine xyzs col) = VisLine (map (fmap f) xyzs) col
+  fmap f (VisLine' xyzcs) = VisLine' $ map (\(xyz,col) -> (fmap f xyz, col)) xyzcs
   fmap f (VisArrow (x,y) xyz0 xyz1 col) = VisArrow (f x, f y) (fmap f xyz0) (fmap f xyz1) col
   fmap f (VisAxes (x,y) xyz quat) = VisAxes (f x, f y) (fmap f xyz) (fmap f quat)
   fmap f (VisPlane xyz x col0 col1) = VisPlane (fmap f xyz) (f x) col0 col1
@@ -171,6 +173,21 @@ drawObject (VisLine path col) =
     lighting $= Disabled
     setColor col
     renderPrimitive LineStrip $ mapM_ (\(Xyz x' y' z') -> vertex$Vertex3 x' y' z') path
+    lighting $= Enabled
+
+-- line where you set the color at each vertex
+drawObject (VisLine' pathcols) =
+  preservingMatrix $ do
+    lighting $= Disabled
+    
+    glBegin gl_LINE_STRIP
+    let f (xyz, col) = do
+          let Xyz x y z = fmap realToFrac xyz
+          setMaterialDiffuse col
+          setColor col
+          glVertex3f x y z
+    mapM_ f pathcols
+    glEnd
     lighting $= Enabled
 
 -- plane
