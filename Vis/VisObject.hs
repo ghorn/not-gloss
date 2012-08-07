@@ -84,7 +84,7 @@ drawObject (VisTriangle (Xyz x0 y0 z0) (Xyz x1 y1 z1) (Xyz x2 y2 z2) col) =
 -- quad
 drawObject (VisQuad (Xyz x0 y0 z0) (Xyz x1 y1 z1) (Xyz x2 y2 z2) (Xyz x3 y3 z3) col) =
   preservingMatrix $ do
-    setMaterialDiffuse col
+    lighting $= Disabled
     setColor col
     glBegin gl_QUADS
     glVertex3d x0 y0 z0
@@ -92,6 +92,7 @@ drawObject (VisQuad (Xyz x0 y0 z0) (Xyz x1 y1 z1) (Xyz x2 y2 z2) (Xyz x3 y3 z3) 
     glVertex3d x2 y2 z2
     glVertex3d x3 y3 z3
     glEnd
+    lighting $= Enabled
 
 -- cylinder
 drawObject (VisCylinder (height,radius) (Xyz x y z) (Quat q0 q1 q2 q3) col) =
