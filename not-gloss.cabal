@@ -1,5 +1,5 @@
 name:                not-gloss
-version:             0.4.2
+version:             0.4.3
 stability:           Experimental
 synopsis:            Painless 3D graphics, no affiliation with gloss
 description:{
@@ -28,14 +28,14 @@ library
 
   other-modules:       
 
-  build-depends:       base == 4.5.*,
+  build-depends:       base >= 4.5 && < 5,
                        GLUT == 2.3.*,
                        time == 1.4.*,
                        OpenGLRaw == 1.2.*,
                        spatial-math >= 0.1.2 && < 0.2,
-                       gloss >= 1.7.4 && < 1.7.5
+                       gloss
 
-  ghc-options:
+  ghc-options: -O2
 
 source-repository head
   type:     git

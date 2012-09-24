@@ -5,6 +5,8 @@ module Vis.VisObject ( VisObject(..)
                      , setPerspectiveMode
                      ) where
 
+import Control.Monad ( when )
+import Data.Maybe ( fromJust, isJust )
 import Graphics.Rendering.OpenGL.Raw
 import qualified Graphics.Gloss.Data.Color as Gloss
 import Graphics.UI.GLUT
@@ -35,6 +37,7 @@ data VisObject a = VisObjects [VisObject a]
                  | VisCustom (IO ())
                  | Vis3dText String (Xyz a) BitmapFont Gloss.Color
                  | Vis2dText String (a,a) BitmapFont Gloss.Color
+                 | VisPoints [Xyz a] (Maybe GLfloat) Gloss.Color
 
 instance Functor VisObject where
   fmap f (VisObjects xs) = VisObjects $ map (fmap f) xs
@@ -51,6 +54,7 @@ instance Functor VisObject where
   fmap f (VisQuad x0 x1 x2 x3 col) = VisQuad (fmap f x0) (fmap f x1) (fmap f x2) (fmap f x3) col
   fmap f (Vis3dText t xyz bmf col) = Vis3dText t (fmap f xyz) bmf col
   fmap f (Vis2dText t (x,y) bmf col) = Vis2dText t (f x, f y) bmf col
+  fmap f (VisPoints xyz s col) = VisPoints (map (fmap f) xyz) s col
   fmap _ (VisCustom f) = VisCustom f
 
 setPerspectiveMode :: IO ()
@@ -283,3 +287,14 @@ drawObject (Vis2dText string (x,y) font col) = preservingMatrix $ do
 
   setPerspectiveMode
   lighting $= Enabled
+
+drawObject (VisPoints xyzs ps col) =
+  preservingMatrix $ do
+    lighting $= Disabled
+    setColor col
+    s' <- get pointSize
+    when (isJust ps) $ pointSize $= (fromJust ps)
+    renderPrimitive Points $ mapM_ (\(Xyz x' y' z') -> vertex$Vertex3 x' y' z') xyzs
+    pointSize $= s'
+    lighting $= Enabled
+
