@@ -17,17 +17,29 @@ import Vis.VisObject ( VisObject(..) )
 
 
 -- | draw a static image
-display :: Real b => VisObject b -> IO ()
-display visobjects = animate (\_ -> visobjects)
+display :: Real b =>
+           Maybe ((Int,Int),(Int,Int)) -- ^ optional (window size, window position)
+           -> String -- ^ window name
+           -> VisObject b -- ^ object to draw
+           -> IO ()
+display sizepos name visobjects = animate sizepos name (\_ -> visobjects)
 
--- | display an animation
-animate :: Real b => (Float -> VisObject b) -> IO ()
-animate userDrawFun = animateIO (return . userDrawFun)
+---- | display an animation
+animate :: Real b =>
+           Maybe ((Int,Int),(Int,Int)) -- ^ optional (window size, window position)
+           -> String -- ^ window name
+           -> (Float -> VisObject b) -- ^ draw function
+           -> IO ()
+animate sizepos name userDrawFun = animateIO sizepos name (return . userDrawFun)
 
 -- | display an animation impurely
-animateIO :: Real b => (Float -> IO (VisObject b)) -> IO ()
-animateIO userDrawFun =
-  vis ts (userState0, cameraState0) simFun drawFun setCameraFun (Just kmCallback) (Just motionCallback) Nothing
+animateIO :: Real b =>
+             Maybe ((Int,Int),(Int,Int)) -- ^ optional (window size, window position)
+             -> String -- ^ window name
+             -> (Float -> IO (VisObject b)) -- ^ draw function
+             -> IO ()
+animateIO sizepos name userDrawFun =
+  vis sizepos name ts (userState0, cameraState0) simFun drawFun setCameraFun (Just kmCallback) (Just motionCallback) Nothing
   where
     ts = 0.01
     userState0 = ()
@@ -45,23 +57,27 @@ animateIO userDrawFun =
 
 -- | run a simulation
 simulate :: Real b =>
-            Double -- ^ sample rate
+            Maybe ((Int,Int),(Int,Int)) -- ^ optional (window size, window position)
+            -> String -- ^ window name
+            -> Double -- ^ sample rate
             -> world -- ^ initial state
             -> (world -> VisObject b) -- ^ draw function
             -> (Float -> world -> world) -- ^ state propogation function (takes current time and state as inputs)
             -> IO ()
-simulate ts state0 userDrawFun userSimFun =
-  simulateIO ts state0 (return . userDrawFun) (\t -> return . (userSimFun t))
+simulate sizepos name ts state0 userDrawFun userSimFun =
+  simulateIO sizepos name ts state0 (return . userDrawFun) (\t -> return . (userSimFun t))
 
 -- | run a simulation impurely
 simulateIO :: Real b =>
-              Double -- ^ sample rate    
+              Maybe ((Int,Int),(Int,Int)) -- ^ optional (window size, window position)
+              -> String -- ^ window name
+              -> Double -- ^ sample rate    
               -> world -- ^ initial state
               -> (world -> IO (VisObject b)) -- ^ draw function
               -> (Float -> world -> IO world) -- ^ state propogation function (takes current time and state as inputs)
               -> IO ()
-simulateIO ts userState0 userDrawFun userSimFun =
-  vis ts (userState0, cameraState0) simFun drawFun setCameraFun (Just kmCallback) (Just motionCallback) Nothing
+simulateIO sizepos name ts userState0 userDrawFun userSimFun =
+  vis sizepos name ts (userState0, cameraState0) simFun drawFun setCameraFun (Just kmCallback) (Just motionCallback) Nothing
   where
     drawFun ((userState, _),_) = do
       obs <- userDrawFun userState
@@ -80,7 +96,9 @@ simulateIO ts userState0 userDrawFun userSimFun =
 
 ---- | play a game
 play :: Real b =>
-        Double -- ^ sample time
+        Maybe ((Int,Int),(Int,Int)) -- ^ optional (window size, window position)
+        -> String -- ^ window name
+        -> Double -- ^ sample time
         -> world -- ^ initial state
         -> (world -> (VisObject b, Maybe Cursor)) -- ^ draw function, can give a different cursor
         -> (Float -> world -> world) -- ^ state propogation function (takes current time and state as inputs)
@@ -89,8 +107,8 @@ play :: Real b =>
         -> Maybe (world -> Position -> world) -- ^ mouse drag callback
         -> Maybe (world -> Position -> world) -- ^ mouse move callback
         -> IO ()
-play ts userState0 userDrawFun userSimFun =
-  vis ts userState0 simFun drawFun
+play sizepos name ts userState0 userDrawFun userSimFun =
+  vis sizepos name ts userState0 simFun drawFun
   where
     drawFun (userState, _) = return $ userDrawFun userState
     simFun (userState,time) = return $ userSimFun time userState
@@ -98,7 +116,9 @@ play ts userState0 userDrawFun userSimFun =
 
 ---- | play a game impurely
 playIO :: Real b =>
-          Double -- ^ sample time
+          Maybe ((Int,Int),(Int,Int)) -- ^ optional (window size, window position)
+          -> String -- ^ window name
+          -> Double -- ^ sample time
           -> world -- ^ initial state
           -> (world -> IO (VisObject b, Maybe Cursor)) -- ^ draw function, can give a different cursor
           -> (Float -> world -> IO world) -- ^ state propogation function (takes current time and state as inputs)
@@ -107,8 +127,8 @@ playIO :: Real b =>
           -> Maybe (world -> Position -> world) -- ^ mouse drag callback
           -> Maybe (world -> Position -> world) -- ^ mouse move callback
           -> IO ()
-playIO ts userState0 userDrawFun userSimFun =
-  vis ts userState0 simFun drawFun
+playIO sizepos name ts userState0 userDrawFun userSimFun =
+  vis sizepos name ts userState0 simFun drawFun
   where
     drawFun (userState, _) = userDrawFun userState
     simFun (userState,time) = userSimFun time userState

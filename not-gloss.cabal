@@ -1,5 +1,5 @@
 name:                not-gloss
-version:             0.4.3
+version:             0.5.0
 stability:           Experimental
 synopsis:            Painless 3D graphics, no affiliation with gloss
 description:{
