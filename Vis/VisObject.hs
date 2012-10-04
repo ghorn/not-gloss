@@ -1,4 +1,6 @@
 {-# OPTIONS_GHC -Wall #-}
+{-# Language StandaloneDeriving #-}
+{-# Language DeriveFunctor #-}
 
 module Vis.VisObject ( VisObject(..)
                      , drawObjects
@@ -23,46 +25,36 @@ setMaterialDiffuse :: Gloss.Color -> IO ()
 setMaterialDiffuse col = materialDiffuse Front $= (glColorOfColor col)
 
 data VisObject a = VisObjects [VisObject a]
-                 | VisCylinder (a,a) (Xyz a) (Quat a) Gloss.Color
-                 | VisBox (a,a,a) (Xyz a) (Quat a) Flavour Gloss.Color
-                 | VisEllipsoid (a,a,a) (Xyz a) (Quat a) Flavour Gloss.Color
-                 | VisSphere a (Xyz a) Flavour Gloss.Color
+                 | VisTranslate (Xyz a) (VisObject a)
+                 | VisRotateQuat (Quat a) (VisObject a)
+                 | VisRotateEulerRad (Euler a) (VisObject a)
+                 | VisRotateEulerDeg (Euler a) (VisObject a) -- degrees more efficient
+                 | VisScale (a,a,a) (VisObject a)
+                 | VisCylinder (a,a) Gloss.Color
+                 | VisBox (a,a,a) Flavour Gloss.Color
+                 | VisCube Flavour Gloss.Color
+                 | VisSphere a Flavour Gloss.Color
+                 | VisEllipsoid (a,a,a) Flavour Gloss.Color
                  | VisLine [Xyz a] Gloss.Color
                  | VisLine' [(Xyz a,Gloss.Color)]
-                 | VisArrow (a,a) (Xyz a) (Xyz a) Gloss.Color
-                 | VisAxes (a,a) (Xyz a) (Quat a)
-                 | VisPlane (Xyz a) a Gloss.Color Gloss.Color
+                 | VisArrow (a,a) (Xyz a) Gloss.Color
+                 | VisAxes (a,a)
+                 | VisPlane (Xyz a) Gloss.Color Gloss.Color
                  | VisTriangle (Xyz a) (Xyz a) (Xyz a) Gloss.Color
                  | VisQuad (Xyz a) (Xyz a) (Xyz a) (Xyz a) Gloss.Color
-                 | VisCustom (IO ())
                  | Vis3dText String (Xyz a) BitmapFont Gloss.Color
                  | Vis2dText String (a,a) BitmapFont Gloss.Color
                  | VisPoints [Xyz a] (Maybe GLfloat) Gloss.Color
+                 | VisCustom (IO ())
 
-instance Functor VisObject where
-  fmap f (VisObjects xs) = VisObjects $ map (fmap f) xs
-  fmap f (VisCylinder (x,y) xyz quat col) = VisCylinder (f x, f y) (fmap f xyz) (fmap f quat) col
-  fmap f (VisBox (x,y,z) xyz quat flav col) = VisBox (f x, f y, f z) (fmap f xyz) (fmap f quat) flav col
-  fmap f (VisSphere s xyz flav col) = VisSphere (f s) (fmap f xyz) flav col
-  fmap f (VisEllipsoid (sx,sy,sz) xyz quat flav col) = VisEllipsoid (f sx, f sy, f sz) (fmap f xyz) (fmap f quat) flav col
-  fmap f (VisLine xyzs col) = VisLine (map (fmap f) xyzs) col
-  fmap f (VisLine' xyzcs) = VisLine' $ map (\(xyz,col) -> (fmap f xyz, col)) xyzcs
-  fmap f (VisArrow (x,y) xyz0 xyz1 col) = VisArrow (f x, f y) (fmap f xyz0) (fmap f xyz1) col
-  fmap f (VisAxes (x,y) xyz quat) = VisAxes (f x, f y) (fmap f xyz) (fmap f quat)
-  fmap f (VisPlane xyz x col0 col1) = VisPlane (fmap f xyz) (f x) col0 col1
-  fmap f (VisTriangle x0 x1 x2 col) = VisTriangle (fmap f x0) (fmap f x1) (fmap f x2) col
-  fmap f (VisQuad x0 x1 x2 x3 col) = VisQuad (fmap f x0) (fmap f x1) (fmap f x2) (fmap f x3) col
-  fmap f (Vis3dText t xyz bmf col) = Vis3dText t (fmap f xyz) bmf col
-  fmap f (Vis2dText t (x,y) bmf col) = Vis2dText t (f x, f y) bmf col
-  fmap f (VisPoints xyz s col) = VisPoints (map (fmap f) xyz) s col
-  fmap _ (VisCustom f) = VisCustom f
+deriving instance Functor VisObject
 
 setPerspectiveMode :: IO ()
 setPerspectiveMode = do
   (_, Size w h) <- get viewport
   matrixMode $= Projection
   loadIdentity
-  perspective 40 (fromIntegral w / fromIntegral h) 0.1 100
+  perspective 40 (fromIntegral w / fromIntegral h) 0.1 1000
   matrixMode $= Modelview 0
 
 drawObjects :: VisObject GLdouble -> IO ()
@@ -73,6 +65,34 @@ drawObjects objects = do
 drawObject :: VisObject GLdouble -> IO ()
 -- list of objects
 drawObject (VisObjects xs) = mapM_ drawObject xs
+
+-- list of objects
+drawObject (VisTranslate (Xyz x y z) visobj) =
+  preservingMatrix $ do
+    translate (Vector3 x y z :: Vector3 GLdouble)
+    drawObject visobj
+
+drawObject (VisRotateQuat (Quat q0 q1 q2 q3) visobj) =
+  preservingMatrix $ do
+    rotate (2 * acos q0 *180/pi :: GLdouble) (Vector3 q1 q2 q3)
+    drawObject visobj
+
+drawObject (VisRotateEulerRad euler visobj) =
+  drawObject $ VisRotateEulerDeg (fmap ((180/pi)*) euler) visobj
+
+drawObject (VisRotateEulerDeg (Euler yaw pitch roll) visobj) =
+  preservingMatrix $ do
+    rotate yaw   (Vector3 0 0 1)
+    rotate pitch (Vector3 0 1 0)
+    rotate roll  (Vector3 1 0 0)
+    drawObject visobj
+
+drawObject (VisScale (sx,sy,sz) visobj) =
+  preservingMatrix $ do
+    normalize $= Enabled
+    scale sx sy sz
+    drawObject visobj
+    normalize $= Disabled
 
 -- triangle
 drawObject (VisTriangle (Xyz x0 y0 z0) (Xyz x1 y1 z1) (Xyz x2 y2 z2) col) =
@@ -99,13 +119,11 @@ drawObject (VisQuad (Xyz x0 y0 z0) (Xyz x1 y1 z1) (Xyz x2 y2 z2) (Xyz x3 y3 z3) 
     lighting $= Enabled
 
 -- cylinder
-drawObject (VisCylinder (height,radius) (Xyz x y z) (Quat q0 q1 q2 q3) col) =
+drawObject (VisCylinder (height,radius) col) =
   preservingMatrix $ do
     setMaterialDiffuse col
     setColor col
     
-    translate (Vector3 x y z :: Vector3 GLdouble)
-    rotate (2 * acos q0 *180/pi :: GLdouble) (Vector3 q1 q2 q3)
     -- translate (Vector3 0 0 (-height/2) :: Vector3 GLdouble)
 
     let nslices = 10 :: Int
@@ -146,31 +164,23 @@ drawObject (VisCylinder (height,radius) (Xyz x y z) (Quat q0 q1 q2 q3) col) =
     mapM_ drawSlices $ zip (init zSteps) (tail zSteps)
 
 -- sphere
-drawObject (VisSphere s xyz flav col) = drawObject $ VisEllipsoid (s,s,s) xyz (Quat 1 0 0 0) flav col
+drawObject (VisSphere r flav col) =
+  preservingMatrix $ do
+    setMaterialDiffuse col
+    setColor col
+    renderObject flav (Sphere' (realToFrac r) 20 20)
 
 -- ellipsoid
-drawObject (VisEllipsoid (sx,sy,sz) (Xyz x y z) (Quat q0 q1 q2 q3) flav col) =
-  preservingMatrix $ do
-    setMaterialDiffuse col
-    setColor col
-    translate (Vector3 x y z :: Vector3 GLdouble)
-    rotate (2 * acos q0 *180/pi :: GLdouble) (Vector3 q1 q2 q3)
-    normalize $= Enabled
-    scale sx sy sz
-    renderObject flav (Sphere' 1 20 20)
-    normalize $= Disabled
+drawObject (VisEllipsoid (sx,sy,sz) flav col) = drawObject $ VisScale (sx,sy,sz) $ VisSphere 1 flav col
 
 -- box
-drawObject (VisBox (dx,dy,dz) (Xyz x y z) (Quat q0 q1 q2 q3) flav col) =
+drawObject (VisBox (dx,dy,dz) flav col) = drawObject $ VisScale (dx,dy,dz) $ VisCube flav col
+
+drawObject (VisCube flav col) =
   preservingMatrix $ do
     setMaterialDiffuse col
     setColor col
-    translate (Vector3 x y z :: Vector3 GLdouble)
-    rotate (2 * acos q0 *180/pi :: GLdouble) (Vector3 q1 q2 q3)
-    normalize $= Enabled
-    scale dx dy dz
     renderObject flav (Cube 1)
-    normalize $= Disabled
 
 -- line
 drawObject (VisLine path col) =
@@ -196,16 +206,15 @@ drawObject (VisLine' pathcols) =
     lighting $= Enabled
 
 -- plane
-drawObject (VisPlane (Xyz x y z) offset col1 col2) =
+drawObject (VisPlane (Xyz x y z) col1 col2) =
   preservingMatrix $ do
-    let norm = 1/(sqrt $ x*x + y*y + z*z)
-        x' = x*norm
-        y' = y*norm
-        z' = z*norm
+    let normInv = 1/(sqrt $ x*x + y*y + z*z)
+        x' = x*normInv
+        y' = y*normInv
+        z' = z*normInv
         r  = 10
         n  = 5
         eps = 0.01
-    translate (Vector3 (offset*x') (offset*y') (offset*z') :: Vector3 GLdouble)
     rotate ((acos z')*180/pi :: GLdouble) (Vector3 (-y') x' 0)
 
     glBegin gl_QUADS
@@ -219,17 +228,22 @@ drawObject (VisPlane (Xyz x y z) offset col1 col2) =
     glEnd
 
     glDisable gl_BLEND
-    mapM_ drawObject $ concat [[ VisLine [Xyz (-r) y0 eps, Xyz r y0 eps] col1
-                               , VisLine [Xyz x0 (-r) eps, Xyz x0 r eps] col1
-                               ] | x0 <- [-r,-r+r/n..r], y0 <- [-r,-r+r/n..r]]
-    mapM_ drawObject $ concat [[ VisLine [Xyz (-r) y0 (-eps), Xyz r y0 (-eps)] col1
-                               , VisLine [Xyz x0 (-r) (-eps), Xyz x0 r (-eps)] col1
-                               ] | x0 <- [-r,-r+r/n..r], y0 <- [-r,-r+r/n..r]]
+    let drawWithEps eps' = do
+          mapM_ drawObject $ concat [[ VisLine [ Xyz (-r) y0 eps'
+                                               , Xyz r    y0 eps'
+                                               ] col1
+                                     , VisLine [ Xyz x0 (-r) eps',
+                                                 Xyz x0 r    eps'
+                                               ] col1
+                                     ] | x0 <- [-r,-r+r/n..r], y0 <- [-r,-r+r/n..r]]
+    drawWithEps eps
+    drawWithEps (-eps)
+    
     glEnable gl_BLEND
 
 
 -- arrow
-drawObject (VisArrow (size, aspectRatio) (Xyz x0 y0 z0) (Xyz x y z) col) =
+drawObject (VisArrow (size, aspectRatio) (Xyz x y z) col) =
   preservingMatrix $ do
     let numSlices = 8
         numStacks = 15
@@ -241,24 +255,20 @@ drawObject (VisArrow (size, aspectRatio) (Xyz x0 y0 z0) (Xyz x y z) col) =
         rotAngle = acos(z/(sqrt(x*x + y*y + z*z) + 1e-15))*180/pi :: GLdouble
         rotAxis = Vector3 (-y) x 0
     
-    translate (Vector3 x0 y0 z0 :: Vector3 GLdouble)
     rotate rotAngle rotAxis
     
     -- cylinder
-    drawObject $ VisCylinder (cylinderHeight, cylinderRadius) (Xyz 0 0 0) (Quat 1 0 0 0) col
+    drawObject $ VisCylinder (cylinderHeight, cylinderRadius) col
     -- cone
     setMaterialDiffuse col
     setColor col
     translate (Vector3 0 0 cylinderHeight :: Vector3 GLdouble)
     renderObject Solid (Cone coneRadius coneHeight numSlices numStacks)
 
-drawObject (VisAxes (size, aspectRatio) (Xyz x0 y0 z0) (Quat q0 q1 q2 q3)) = preservingMatrix $ do
-  translate (Vector3 x0 y0 z0 :: Vector3 GLdouble)
-  rotate (2 * acos q0 *180/pi :: GLdouble) (Vector3 q1 q2 q3)
-  
-  let xAxis = VisArrow (size, aspectRatio) (Xyz 0 0 0) (Xyz 1 0 0) (Gloss.makeColor 1 0 0 1)
-      yAxis = VisArrow (size, aspectRatio) (Xyz 0 0 0) (Xyz 0 1 0) (Gloss.makeColor 0 1 0 1)
-      zAxis = VisArrow (size, aspectRatio) (Xyz 0 0 0) (Xyz 0 0 1) (Gloss.makeColor 0 0 1 1)
+drawObject (VisAxes (size, aspectRatio)) = preservingMatrix $ do
+  let xAxis = VisArrow (size, aspectRatio) (Xyz 1 0 0) (Gloss.makeColor 1 0 0 1)
+      yAxis = VisArrow (size, aspectRatio) (Xyz 0 1 0) (Gloss.makeColor 0 1 0 1)
+      zAxis = VisArrow (size, aspectRatio) (Xyz 0 0 1) (Gloss.makeColor 0 0 1 1)
   drawObject $ VisObjects [xAxis, yAxis, zAxis]
 
 drawObject (VisCustom f) = preservingMatrix f
