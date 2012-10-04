@@ -11,7 +11,8 @@ import Control.Monad ( when )
 import Data.Maybe ( fromJust, isJust )
 import Graphics.Rendering.OpenGL.Raw
 import qualified Graphics.Gloss.Data.Color as Gloss
-import Graphics.UI.GLUT
+import Graphics.UI.GLUT hiding ( Points, Cylinder, Line, Plane, Cube, Sphere, Triangle )
+import qualified Graphics.UI.GLUT as GLUT
 
 import SpatialMath
 
@@ -25,33 +26,33 @@ setMaterialDiffuse :: Gloss.Color -> IO ()
 setMaterialDiffuse col = materialDiffuse Front $= (glColorOfColor col)
 
 data VisObject a = VisObjects [VisObject a]
-                 | VisTranslate (Xyz a) (VisObject a)
-                 | VisRotateQuat (Quat a) (VisObject a)
-                 | VisRotateEulerRad (Euler a) (VisObject a)
-                 | VisRotateEulerDeg (Euler a) (VisObject a) -- degrees more efficient
-                 | VisScale (a,a,a) (VisObject a)
-                 | VisCylinder (a,a) Gloss.Color
-                 | VisBox (a,a,a) Flavour Gloss.Color
-                 | VisCube Flavour Gloss.Color
-                 | VisSphere a Flavour Gloss.Color
-                 | VisEllipsoid (a,a,a) Flavour Gloss.Color
-                 | VisLine [Xyz a] Gloss.Color
-                 | VisLine' [(Xyz a,Gloss.Color)]
-                 | VisArrow (a,a) (Xyz a) Gloss.Color
-                 | VisAxes (a,a)
-                 | VisPlane (Xyz a) Gloss.Color Gloss.Color
-                 | VisTriangle (Xyz a) (Xyz a) (Xyz a) Gloss.Color
-                 | VisQuad (Xyz a) (Xyz a) (Xyz a) (Xyz a) Gloss.Color
-                 | Vis3dText String (Xyz a) BitmapFont Gloss.Color
-                 | Vis2dText String (a,a) BitmapFont Gloss.Color
-                 | VisPoints [Xyz a] (Maybe GLfloat) Gloss.Color
-                 | VisCustom (IO ())
+                 | Trans (Xyz a) (VisObject a)
+                 | RotQuat (Quat a) (VisObject a)
+                 | RotEulerRad (Euler a) (VisObject a)
+                 | RotEulerDeg (Euler a) (VisObject a) -- degrees more efficient
+                 | Scale (a,a,a) (VisObject a)
+                 | Cylinder (a,a) Gloss.Color
+                 | Box (a,a,a) Flavour Gloss.Color
+                 | Cube a Flavour Gloss.Color
+                 | Sphere a Flavour Gloss.Color
+                 | Ellipsoid (a,a,a) Flavour Gloss.Color
+                 | Line [Xyz a] Gloss.Color
+                 | Line' [(Xyz a,Gloss.Color)]
+                 | Arrow (a,a) (Xyz a) Gloss.Color
+                 | Axes (a,a)
+                 | Plane (Xyz a) Gloss.Color Gloss.Color
+                 | Triangle (Xyz a) (Xyz a) (Xyz a) Gloss.Color
+                 | Quad (Xyz a) (Xyz a) (Xyz a) (Xyz a) Gloss.Color
+                 | Text3d String (Xyz a) BitmapFont Gloss.Color
+                 | Text2d String (a,a) BitmapFont Gloss.Color
+                 | Points [Xyz a] (Maybe GLfloat) Gloss.Color
+                 | Custom (IO ())
 
 deriving instance Functor VisObject
 
 setPerspectiveMode :: IO ()
 setPerspectiveMode = do
-  (_, Size w h) <- get viewport
+  (_, Size w h) <- GLUT.get viewport
   matrixMode $= Projection
   loadIdentity
   perspective 40 (fromIntegral w / fromIntegral h) 0.1 1000
@@ -67,27 +68,27 @@ drawObject :: VisObject GLdouble -> IO ()
 drawObject (VisObjects xs) = mapM_ drawObject xs
 
 -- list of objects
-drawObject (VisTranslate (Xyz x y z) visobj) =
+drawObject (Trans (Xyz x y z) visobj) =
   preservingMatrix $ do
     translate (Vector3 x y z :: Vector3 GLdouble)
     drawObject visobj
 
-drawObject (VisRotateQuat (Quat q0 q1 q2 q3) visobj) =
+drawObject (RotQuat (Quat q0 q1 q2 q3) visobj) =
   preservingMatrix $ do
     rotate (2 * acos q0 *180/pi :: GLdouble) (Vector3 q1 q2 q3)
     drawObject visobj
 
-drawObject (VisRotateEulerRad euler visobj) =
-  drawObject $ VisRotateEulerDeg (fmap ((180/pi)*) euler) visobj
+drawObject (RotEulerRad euler visobj) =
+  drawObject $ RotEulerDeg (fmap ((180/pi)*) euler) visobj
 
-drawObject (VisRotateEulerDeg (Euler yaw pitch roll) visobj) =
+drawObject (RotEulerDeg (Euler yaw pitch roll) visobj) =
   preservingMatrix $ do
     rotate yaw   (Vector3 0 0 1)
     rotate pitch (Vector3 0 1 0)
     rotate roll  (Vector3 1 0 0)
     drawObject visobj
 
-drawObject (VisScale (sx,sy,sz) visobj) =
+drawObject (Scale (sx,sy,sz) visobj) =
   preservingMatrix $ do
     normalize $= Enabled
     scale sx sy sz
@@ -95,7 +96,7 @@ drawObject (VisScale (sx,sy,sz) visobj) =
     normalize $= Disabled
 
 -- triangle
-drawObject (VisTriangle (Xyz x0 y0 z0) (Xyz x1 y1 z1) (Xyz x2 y2 z2) col) =
+drawObject (Triangle (Xyz x0 y0 z0) (Xyz x1 y1 z1) (Xyz x2 y2 z2) col) =
   preservingMatrix $ do
     setMaterialDiffuse col
     setColor col
@@ -106,7 +107,7 @@ drawObject (VisTriangle (Xyz x0 y0 z0) (Xyz x1 y1 z1) (Xyz x2 y2 z2) col) =
     glEnd
    
 -- quad
-drawObject (VisQuad (Xyz x0 y0 z0) (Xyz x1 y1 z1) (Xyz x2 y2 z2) (Xyz x3 y3 z3) col) =
+drawObject (Quad (Xyz x0 y0 z0) (Xyz x1 y1 z1) (Xyz x2 y2 z2) (Xyz x3 y3 z3) col) =
   preservingMatrix $ do
     lighting $= Disabled
     setColor col
@@ -119,7 +120,7 @@ drawObject (VisQuad (Xyz x0 y0 z0) (Xyz x1 y1 z1) (Xyz x2 y2 z2) (Xyz x3 y3 z3) 
     lighting $= Enabled
 
 -- cylinder
-drawObject (VisCylinder (height,radius) col) =
+drawObject (Cylinder (height,radius) col) =
   preservingMatrix $ do
     setMaterialDiffuse col
     setColor col
@@ -164,34 +165,34 @@ drawObject (VisCylinder (height,radius) col) =
     mapM_ drawSlices $ zip (init zSteps) (tail zSteps)
 
 -- sphere
-drawObject (VisSphere r flav col) =
+drawObject (Sphere r flav col) =
   preservingMatrix $ do
     setMaterialDiffuse col
     setColor col
-    renderObject flav (Sphere' (realToFrac r) 20 20)
+    renderObject flav (GLUT.Sphere' (realToFrac r) 20 20)
 
 -- ellipsoid
-drawObject (VisEllipsoid (sx,sy,sz) flav col) = drawObject $ VisScale (sx,sy,sz) $ VisSphere 1 flav col
+drawObject (Ellipsoid (sx,sy,sz) flav col) = drawObject $ Scale (sx,sy,sz) $ Sphere 1 flav col
 
 -- box
-drawObject (VisBox (dx,dy,dz) flav col) = drawObject $ VisScale (dx,dy,dz) $ VisCube flav col
+drawObject (Box (dx,dy,dz) flav col) = drawObject $ Scale (dx,dy,dz) $ Cube 1 flav col
 
-drawObject (VisCube flav col) =
+drawObject (Cube r flav col) =
   preservingMatrix $ do
     setMaterialDiffuse col
     setColor col
-    renderObject flav (Cube 1)
+    renderObject flav (GLUT.Cube (realToFrac r))
 
 -- line
-drawObject (VisLine path col) =
+drawObject (Line path col) =
   preservingMatrix $ do
     lighting $= Disabled
     setColor col
-    renderPrimitive LineStrip $ mapM_ (\(Xyz x' y' z') -> vertex$Vertex3 x' y' z') path
+    renderPrimitive LineStrip $ mapM_ (\(Xyz x' y' z') -> vertex $ Vertex3 x' y' z') path
     lighting $= Enabled
 
 -- line where you set the color at each vertex
-drawObject (VisLine' pathcols) =
+drawObject (Line' pathcols) =
   preservingMatrix $ do
     lighting $= Disabled
     
@@ -206,7 +207,7 @@ drawObject (VisLine' pathcols) =
     lighting $= Enabled
 
 -- plane
-drawObject (VisPlane (Xyz x y z) col1 col2) =
+drawObject (Plane (Xyz x y z) col1 col2) =
   preservingMatrix $ do
     let normInv = 1/(sqrt $ x*x + y*y + z*z)
         x' = x*normInv
@@ -229,10 +230,10 @@ drawObject (VisPlane (Xyz x y z) col1 col2) =
 
     glDisable gl_BLEND
     let drawWithEps eps' = do
-          mapM_ drawObject $ concat [[ VisLine [ Xyz (-r) y0 eps'
+          mapM_ drawObject $ concat [[ Line [ Xyz (-r) y0 eps'
                                                , Xyz r    y0 eps'
                                                ] col1
-                                     , VisLine [ Xyz x0 (-r) eps',
+                                     , Line [ Xyz x0 (-r) eps',
                                                  Xyz x0 r    eps'
                                                ] col1
                                      ] | x0 <- [-r,-r+r/n..r], y0 <- [-r,-r+r/n..r]]
@@ -243,7 +244,7 @@ drawObject (VisPlane (Xyz x y z) col1 col2) =
 
 
 -- arrow
-drawObject (VisArrow (size, aspectRatio) (Xyz x y z) col) =
+drawObject (Arrow (size, aspectRatio) (Xyz x y z) col) =
   preservingMatrix $ do
     let numSlices = 8
         numStacks = 15
@@ -258,29 +259,29 @@ drawObject (VisArrow (size, aspectRatio) (Xyz x y z) col) =
     rotate rotAngle rotAxis
     
     -- cylinder
-    drawObject $ VisCylinder (cylinderHeight, cylinderRadius) col
+    drawObject $ Cylinder (cylinderHeight, cylinderRadius) col
     -- cone
     setMaterialDiffuse col
     setColor col
     translate (Vector3 0 0 cylinderHeight :: Vector3 GLdouble)
-    renderObject Solid (Cone coneRadius coneHeight numSlices numStacks)
+    renderObject Solid (GLUT.Cone coneRadius coneHeight numSlices numStacks)
 
-drawObject (VisAxes (size, aspectRatio)) = preservingMatrix $ do
-  let xAxis = VisArrow (size, aspectRatio) (Xyz 1 0 0) (Gloss.makeColor 1 0 0 1)
-      yAxis = VisArrow (size, aspectRatio) (Xyz 0 1 0) (Gloss.makeColor 0 1 0 1)
-      zAxis = VisArrow (size, aspectRatio) (Xyz 0 0 1) (Gloss.makeColor 0 0 1 1)
+drawObject (Axes (size, aspectRatio)) = preservingMatrix $ do
+  let xAxis = Arrow (size, aspectRatio) (Xyz 1 0 0) (Gloss.makeColor 1 0 0 1)
+      yAxis = Arrow (size, aspectRatio) (Xyz 0 1 0) (Gloss.makeColor 0 1 0 1)
+      zAxis = Arrow (size, aspectRatio) (Xyz 0 0 1) (Gloss.makeColor 0 0 1 1)
   drawObject $ VisObjects [xAxis, yAxis, zAxis]
 
-drawObject (VisCustom f) = preservingMatrix f
+drawObject (Custom f) = preservingMatrix f
 
-drawObject (Vis3dText string (Xyz x y z) font col) = preservingMatrix $ do
+drawObject (Text3d string (Xyz x y z) font col) = preservingMatrix $ do
   lighting $= Disabled
   setColor col
   glRasterPos3d x y z
   renderString font string
   lighting $= Enabled
 
-drawObject (Vis2dText string (x,y) font col) = preservingMatrix $ do
+drawObject (Text2d string (x,y) font col) = preservingMatrix $ do
   lighting $= Disabled
   setColor col
 
@@ -298,13 +299,13 @@ drawObject (Vis2dText string (x,y) font col) = preservingMatrix $ do
   setPerspectiveMode
   lighting $= Enabled
 
-drawObject (VisPoints xyzs ps col) =
+drawObject (Points xyzs ps col) =
   preservingMatrix $ do
     lighting $= Disabled
     setColor col
     s' <- get pointSize
     when (isJust ps) $ pointSize $= (fromJust ps)
-    renderPrimitive Points $ mapM_ (\(Xyz x' y' z') -> vertex$Vertex3 x' y' z') xyzs
+    renderPrimitive GLUT.Points $ mapM_ (\(Xyz x' y' z') -> vertex $ Vertex3 x' y' z') xyzs
     pointSize $= s'
     lighting $= Enabled
 
