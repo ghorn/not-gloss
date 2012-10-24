@@ -10,19 +10,20 @@ module Vis.VisObject ( VisObject(..)
 import Control.Monad ( when )
 import Data.Maybe ( fromJust, isJust )
 import Graphics.Rendering.OpenGL.Raw
-import qualified Graphics.Gloss.Data.Color as Gloss
 import Graphics.UI.GLUT hiding ( Points, Cylinder, Line, Plane, Cube, Sphere, Triangle )
 import qualified Graphics.UI.GLUT as GLUT
 
 import SpatialMath
 
-glColorOfColor :: Gloss.Color -> Color4 GLfloat
-glColorOfColor = (\(r,g,b,a) -> fmap realToFrac (Color4 r g b a)) . Gloss.rgbaOfColor
+import qualified Vis.GlossColor as GlossColor
 
-setColor :: Gloss.Color -> IO ()
+glColorOfColor :: GlossColor.Color -> Color4 GLfloat
+glColorOfColor = (\(r,g,b,a) -> fmap realToFrac (Color4 r g b a)) . GlossColor.rgbaOfColor
+
+setColor :: GlossColor.Color -> IO ()
 setColor = color . glColorOfColor
 
-setMaterialDiffuse :: Gloss.Color -> IO ()
+setMaterialDiffuse :: GlossColor.Color -> IO ()
 setMaterialDiffuse col = materialDiffuse Front $= (glColorOfColor col)
 
 data VisObject a = VisObjects [VisObject a]
@@ -31,21 +32,21 @@ data VisObject a = VisObjects [VisObject a]
                  | RotEulerRad (Euler a) (VisObject a)
                  | RotEulerDeg (Euler a) (VisObject a) -- degrees more efficient
                  | Scale (a,a,a) (VisObject a)
-                 | Cylinder (a,a) Gloss.Color
-                 | Box (a,a,a) Flavour Gloss.Color
-                 | Cube a Flavour Gloss.Color
-                 | Sphere a Flavour Gloss.Color
-                 | Ellipsoid (a,a,a) Flavour Gloss.Color
-                 | Line [Xyz a] Gloss.Color
-                 | Line' [(Xyz a,Gloss.Color)]
-                 | Arrow (a,a) (Xyz a) Gloss.Color
+                 | Cylinder (a,a) GlossColor.Color
+                 | Box (a,a,a) Flavour GlossColor.Color
+                 | Cube a Flavour GlossColor.Color
+                 | Sphere a Flavour GlossColor.Color
+                 | Ellipsoid (a,a,a) Flavour GlossColor.Color
+                 | Line [Xyz a] GlossColor.Color
+                 | Line' [(Xyz a,GlossColor.Color)]
+                 | Arrow (a,a) (Xyz a) GlossColor.Color
                  | Axes (a,a)
-                 | Plane (Xyz a) Gloss.Color Gloss.Color
-                 | Triangle (Xyz a) (Xyz a) (Xyz a) Gloss.Color
-                 | Quad (Xyz a) (Xyz a) (Xyz a) (Xyz a) Gloss.Color
-                 | Text3d String (Xyz a) BitmapFont Gloss.Color
-                 | Text2d String (a,a) BitmapFont Gloss.Color
-                 | Points [Xyz a] (Maybe GLfloat) Gloss.Color
+                 | Plane (Xyz a) GlossColor.Color GlossColor.Color
+                 | Triangle (Xyz a) (Xyz a) (Xyz a) GlossColor.Color
+                 | Quad (Xyz a) (Xyz a) (Xyz a) (Xyz a) GlossColor.Color
+                 | Text3d String (Xyz a) BitmapFont GlossColor.Color
+                 | Text2d String (a,a) BitmapFont GlossColor.Color
+                 | Points [Xyz a] (Maybe GLfloat) GlossColor.Color
                  | Custom (IO ())
 
 deriving instance Functor VisObject
@@ -267,9 +268,9 @@ drawObject (Arrow (size, aspectRatio) (Xyz x y z) col) =
     renderObject Solid (GLUT.Cone coneRadius coneHeight numSlices numStacks)
 
 drawObject (Axes (size, aspectRatio)) = preservingMatrix $ do
-  let xAxis = Arrow (size, aspectRatio) (Xyz 1 0 0) (Gloss.makeColor 1 0 0 1)
-      yAxis = Arrow (size, aspectRatio) (Xyz 0 1 0) (Gloss.makeColor 0 1 0 1)
-      zAxis = Arrow (size, aspectRatio) (Xyz 0 0 1) (Gloss.makeColor 0 0 1 1)
+  let xAxis = Arrow (size, aspectRatio) (Xyz 1 0 0) (GlossColor.makeColor 1 0 0 1)
+      yAxis = Arrow (size, aspectRatio) (Xyz 0 1 0) (GlossColor.makeColor 0 1 0 1)
+      zAxis = Arrow (size, aspectRatio) (Xyz 0 0 1) (GlossColor.makeColor 0 0 1 1)
   drawObject $ VisObjects [xAxis, yAxis, zAxis]
 
 drawObject (Custom f) = preservingMatrix f

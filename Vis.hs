@@ -11,11 +11,11 @@ module Vis ( display
            , SpecialKey(..)
            , BitmapFont(..)
            , Flavour(..)
-           , module Graphics.Gloss.Data.Color
+           , module Vis.GlossColor
            ) where
 
-import Graphics.Gloss.Data.Color
 import Graphics.UI.GLUT ( SpecialKey(..), BitmapFont(..), Flavour(..) )
 
 import Vis.Interface ( display, animate, simulate, play, animateIO, simulateIO, playIO )
 import Vis.VisObject ( VisObject(..) )
+import Vis.GlossColor
