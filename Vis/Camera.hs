@@ -92,4 +92,6 @@ cameraKeyboardMouse camera key keyState =
   
     newRho = case (key, keyState) of (MouseButton WheelUp, Down)   -> 0.9 * (rho camera)
                                      (MouseButton WheelDown, Down) -> 1.1 * (rho camera)
+                                     (Char 'e', Down)   -> 0.9 * (rho camera)
+                                     (Char 'q', Down) -> 1.1 * (rho camera)
                                      _ -> rho camera
