@@ -1,5 +1,5 @@
 name:                not-gloss
-version:             0.5.0.4
+version:             0.5.0.5
 stability:           Experimental
 synopsis:            Painless 3D graphics, no affiliation with gloss
 description:{
@@ -9,6 +9,8 @@ This is an early release and the api will certainly change.
 Note that transparency can be controlled by the alpha value: "makeColor r g b alpha" but that you must draw objects from back to front for transparency to properly work (just put clear things last).
 Also, transparent ellipsoids and cylinders have ugly artifacts, sorry.
 Look at the complimentary package not-gloss-examples to get started.
+
+0.5.0.5 - GLUT/OpenGLRaw version bumps
 }
 license:             BSD3
 license-file:        LICENSE
@@ -30,9 +32,9 @@ library
   other-modules:       
 
   build-depends:       base >= 4.5 && < 5,
-                       GLUT == 2.3.*,
+                       GLUT >= 2.3.0.0 && < 2.6,
                        time == 1.4.*,
-                       OpenGLRaw >= 1.2.0.0 && < 1.4,
+                       OpenGLRaw >= 1.2.0.0 && < 1.5,
                        spatial-math >= 0.1.7 && < 0.2
 
   ghc-options: -O2
