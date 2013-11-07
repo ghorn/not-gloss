@@ -1,0 +1,5 @@
+0.6.0.0:
+- use spatial-math 0.2, which uses types from `linear` package
+
+0.5.0.5:
+- GLUT/OpenGLRaw version bumps

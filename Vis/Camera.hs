@@ -8,8 +8,8 @@ module Vis.Camera ( Camera0(..)
                   , cameraKeyboardMouse
                   ) where
 
-import Xyz
 import Graphics.UI.GLUT
+import SpatialMath ( V3(..) )
 
 data Camera0 = Camera0 { phi0 :: GLdouble
                        , theta0 :: GLdouble
@@ -19,7 +19,7 @@ data Camera0 = Camera0 { phi0 :: GLdouble
 data Camera = Camera { phi :: GLdouble
                      , theta :: GLdouble
                      , rho :: GLdouble
-                     , pos :: Xyz GLdouble
+                     , pos :: V3 GLdouble
                      , ballX :: GLint
                      , ballY :: GLint 
                      , leftButton :: GLint
@@ -30,7 +30,7 @@ makeCamera :: Camera0 -> Camera
 makeCamera camera0 = Camera { phi   = phi0 camera0
                             , theta = theta0 camera0
                             , rho   = rho0 camera0
-                            , pos = Xyz 0 0 0
+                            , pos = V3 0 0 0
                             , ballX = (-1)
                             , ballY = (-1)
                             , leftButton = 0
@@ -40,7 +40,7 @@ makeCamera camera0 = Camera { phi   = phi0 camera0
 setCamera :: Camera -> IO ()
 setCamera camera = lookAt (Vertex3 xc yc zc) (Vertex3 x0 y0 z0) (Vector3 0 0 (-1))
   where
-    Xyz x0 y0 z0 = pos camera
+    V3 x0 y0 z0 = pos camera
     phi'   = phi   camera
     theta' = theta camera
     rho'   = rho   camera
@@ -50,7 +50,7 @@ setCamera camera = lookAt (Vertex3 xc yc zc) (Vertex3 x0 y0 z0) (Vector3 0 0 (-1
     zc = z0 - rho'*sin(theta'*pi/180)
 
 cameraMotion :: Camera -> Position -> Camera
-cameraMotion (Camera phi0' theta0' rho0' (Xyz x0 y0 z0) bx by lb rb) (Position x y) =
+cameraMotion (Camera phi0' theta0' rho0' (V3 x0 y0 z0) bx by lb rb) (Position x y) =
   Camera nextPhi nextTheta rho0' nextPos nextBallX nextBallY lb rb
   where
     deltaX
@@ -71,8 +71,8 @@ cameraMotion (Camera phi0' theta0' rho0' (Xyz x0 y0 z0) bx by lb rb) (Position x
                            else (phi0', theta0')
 
     nextPos = if rb == 1
-              then Xyz nextX nextY z0
-              else Xyz x0 y0 z0
+              then V3 nextX nextY z0
+              else V3 x0 y0 z0
 
     nextBallX = x
     nextBallY = y

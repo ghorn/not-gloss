@@ -27,8 +27,8 @@ setMaterialDiffuse :: GlossColor.Color -> IO ()
 setMaterialDiffuse col = materialDiffuse Front $= (glColorOfColor col)
 
 data VisObject a = VisObjects [VisObject a]
-                 | Trans (Xyz a) (VisObject a)
-                 | RotQuat (Quat a) (VisObject a)
+                 | Trans (V3 a) (VisObject a)
+                 | RotQuat (Quaternion a) (VisObject a)
                  | RotEulerRad (Euler a) (VisObject a)
                  | RotEulerDeg (Euler a) (VisObject a) -- degrees more efficient
                  | Scale (a,a,a) (VisObject a)
@@ -37,16 +37,16 @@ data VisObject a = VisObjects [VisObject a]
                  | Cube a Flavour GlossColor.Color
                  | Sphere a Flavour GlossColor.Color
                  | Ellipsoid (a,a,a) Flavour GlossColor.Color
-                 | Line [Xyz a] GlossColor.Color
-                 | Line' [(Xyz a,GlossColor.Color)]
-                 | Arrow (a,a) (Xyz a) GlossColor.Color
+                 | Line [V3 a] GlossColor.Color
+                 | Line' [(V3 a,GlossColor.Color)]
+                 | Arrow (a,a) (V3 a) GlossColor.Color
                  | Axes (a,a)
-                 | Plane (Xyz a) GlossColor.Color GlossColor.Color
-                 | Triangle (Xyz a) (Xyz a) (Xyz a) GlossColor.Color
-                 | Quad (Xyz a) (Xyz a) (Xyz a) (Xyz a) GlossColor.Color
-                 | Text3d String (Xyz a) BitmapFont GlossColor.Color
+                 | Plane (V3 a) GlossColor.Color GlossColor.Color
+                 | Triangle (V3 a) (V3 a) (V3 a) GlossColor.Color
+                 | Quad (V3 a) (V3 a) (V3 a) (V3 a) GlossColor.Color
+                 | Text3d String (V3 a) BitmapFont GlossColor.Color
                  | Text2d String (a,a) BitmapFont GlossColor.Color
-                 | Points [Xyz a] (Maybe GLfloat) GlossColor.Color
+                 | Points [V3 a] (Maybe GLfloat) GlossColor.Color
                  | Custom (IO ())
 
 deriving instance Functor VisObject
@@ -69,12 +69,12 @@ drawObject :: VisObject GLdouble -> IO ()
 drawObject (VisObjects xs) = mapM_ drawObject xs
 
 -- list of objects
-drawObject (Trans (Xyz x y z) visobj) =
+drawObject (Trans (V3 x y z) visobj) =
   preservingMatrix $ do
     translate (Vector3 x y z :: Vector3 GLdouble)
     drawObject visobj
 
-drawObject (RotQuat (Quat q0 q1 q2 q3) visobj) =
+drawObject (RotQuat (Quaternion q0 (V3 q1 q2 q3)) visobj) =
   preservingMatrix $ do
     rotate (2 * acos q0 *180/pi :: GLdouble) (Vector3 q1 q2 q3)
     drawObject visobj
@@ -97,7 +97,7 @@ drawObject (Scale (sx,sy,sz) visobj) =
     normalize $= Disabled
 
 -- triangle
-drawObject (Triangle (Xyz x0 y0 z0) (Xyz x1 y1 z1) (Xyz x2 y2 z2) col) =
+drawObject (Triangle (V3 x0 y0 z0) (V3 x1 y1 z1) (V3 x2 y2 z2) col) =
   preservingMatrix $ do
     setMaterialDiffuse col
     setColor col
@@ -108,7 +108,7 @@ drawObject (Triangle (Xyz x0 y0 z0) (Xyz x1 y1 z1) (Xyz x2 y2 z2) col) =
     glEnd
    
 -- quad
-drawObject (Quad (Xyz x0 y0 z0) (Xyz x1 y1 z1) (Xyz x2 y2 z2) (Xyz x3 y3 z3) col) =
+drawObject (Quad (V3 x0 y0 z0) (V3 x1 y1 z1) (V3 x2 y2 z2) (V3 x3 y3 z3) col) =
   preservingMatrix $ do
     lighting $= Disabled
     setColor col
@@ -189,7 +189,7 @@ drawObject (Line path col) =
   preservingMatrix $ do
     lighting $= Disabled
     setColor col
-    renderPrimitive LineStrip $ mapM_ (\(Xyz x' y' z') -> vertex $ Vertex3 x' y' z') path
+    renderPrimitive LineStrip $ mapM_ (\(V3 x' y' z') -> vertex $ Vertex3 x' y' z') path
     lighting $= Enabled
 
 -- line where you set the color at each vertex
@@ -199,7 +199,7 @@ drawObject (Line' pathcols) =
     
     glBegin gl_LINE_STRIP
     let f (xyz, col) = do
-          let Xyz x y z = fmap realToFrac xyz
+          let V3 x y z = fmap realToFrac xyz
           setMaterialDiffuse col
           setColor col
           glVertex3f x y z
@@ -208,7 +208,7 @@ drawObject (Line' pathcols) =
     lighting $= Enabled
 
 -- plane
-drawObject (Plane (Xyz x y z) col1 col2) =
+drawObject (Plane (V3 x y z) col1 col2) =
   preservingMatrix $ do
     let normInv = 1/(sqrt $ x*x + y*y + z*z)
         x' = x*normInv
@@ -231,12 +231,12 @@ drawObject (Plane (Xyz x y z) col1 col2) =
 
     glDisable gl_BLEND
     let drawWithEps eps' = do
-          mapM_ drawObject $ concat [[ Line [ Xyz (-r) y0 eps'
-                                               , Xyz r    y0 eps'
-                                               ] col1
-                                     , Line [ Xyz x0 (-r) eps',
-                                                 Xyz x0 r    eps'
-                                               ] col1
+          mapM_ drawObject $ concat [[ Line [ V3 (-r) y0 eps'
+                                            , V3 r    y0 eps'
+                                            ] col1
+                                     , Line [ V3 x0 (-r) eps',
+                                              V3 x0 r    eps'
+                                            ] col1
                                      ] | x0 <- [-r,-r+r/n..r], y0 <- [-r,-r+r/n..r]]
     drawWithEps eps
     drawWithEps (-eps)
@@ -245,7 +245,7 @@ drawObject (Plane (Xyz x y z) col1 col2) =
 
 
 -- arrow
-drawObject (Arrow (size, aspectRatio) (Xyz x y z) col) =
+drawObject (Arrow (size, aspectRatio) (V3 x y z) col) =
   preservingMatrix $ do
     let numSlices = 8
         numStacks = 15
@@ -268,14 +268,14 @@ drawObject (Arrow (size, aspectRatio) (Xyz x y z) col) =
     renderObject Solid (GLUT.Cone coneRadius coneHeight numSlices numStacks)
 
 drawObject (Axes (size, aspectRatio)) = preservingMatrix $ do
-  let xAxis = Arrow (size, aspectRatio) (Xyz 1 0 0) (GlossColor.makeColor 1 0 0 1)
-      yAxis = Arrow (size, aspectRatio) (Xyz 0 1 0) (GlossColor.makeColor 0 1 0 1)
-      zAxis = Arrow (size, aspectRatio) (Xyz 0 0 1) (GlossColor.makeColor 0 0 1 1)
+  let xAxis = Arrow (size, aspectRatio) (V3 1 0 0) (GlossColor.makeColor 1 0 0 1)
+      yAxis = Arrow (size, aspectRatio) (V3 0 1 0) (GlossColor.makeColor 0 1 0 1)
+      zAxis = Arrow (size, aspectRatio) (V3 0 0 1) (GlossColor.makeColor 0 0 1 1)
   drawObject $ VisObjects [xAxis, yAxis, zAxis]
 
 drawObject (Custom f) = preservingMatrix f
 
-drawObject (Text3d string (Xyz x y z) font col) = preservingMatrix $ do
+drawObject (Text3d string (V3 x y z) font col) = preservingMatrix $ do
   lighting $= Disabled
   setColor col
   glRasterPos3d x y z
@@ -306,7 +306,7 @@ drawObject (Points xyzs ps col) =
     setColor col
     s' <- get pointSize
     when (isJust ps) $ pointSize $= (fromJust ps)
-    renderPrimitive GLUT.Points $ mapM_ (\(Xyz x' y' z') -> vertex $ Vertex3 x' y' z') xyzs
+    renderPrimitive GLUT.Points $ mapM_ (\(V3 x' y' z') -> vertex $ Vertex3 x' y' z') xyzs
     pointSize $= s'
     lighting $= Enabled
 
