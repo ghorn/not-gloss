@@ -13,6 +13,9 @@ Also, transparent ellipsoids and cylinders have ugly artifacts, sorry.
 Look at the complimentary package not-gloss-examples to get started.
 
 }
+
+extra-source-files:  changelog.txt
+
 license:             BSD3
 license-file:        LICENSE
 author:              Greg Horn
