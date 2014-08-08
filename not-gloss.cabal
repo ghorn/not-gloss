@@ -1,5 +1,5 @@
 name:                not-gloss
-version:             0.6.0.1
+version:             0.6.1.0
 stability:           Experimental
 synopsis:            Painless 3D graphics, no affiliation with gloss
 description:{
@@ -20,7 +20,7 @@ license:             BSD3
 license-file:        LICENSE
 author:              Greg Horn
 maintainer:          gregmainland@gmail.com
--- copyright:           
+copyright:           (c) Greg Horn 2012-2014
 category:            Graphics
 build-type:          Simple
 cabal-version:       >=1.8

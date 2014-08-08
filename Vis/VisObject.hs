@@ -29,6 +29,7 @@ setMaterialDiffuse col = materialDiffuse Front $= (glColorOfColor col)
 data VisObject a = VisObjects [VisObject a]
                  | Trans (V3 a) (VisObject a)
                  | RotQuat (Quaternion a) (VisObject a)
+                 | RotDcm (M33 a) (VisObject a)
                  | RotEulerRad (Euler a) (VisObject a)
                  | RotEulerDeg (Euler a) (VisObject a) -- degrees more efficient
                  | Scale (a,a,a) (VisObject a)
@@ -78,6 +79,9 @@ drawObject (RotQuat (Quaternion q0 (V3 q1 q2 q3)) visobj) =
   preservingMatrix $ do
     rotate (2 * acos q0 *180/pi :: GLdouble) (Vector3 q1 q2 q3)
     drawObject visobj
+
+drawObject (RotDcm dcm visobject) =
+  drawObject (RotQuat (quatOfDcm dcm) visobject)
 
 drawObject (RotEulerRad euler visobj) =
   drawObject $ RotEulerDeg (fmap ((180/pi)*) euler) visobj
