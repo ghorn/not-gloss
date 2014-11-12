@@ -1,5 +1,7 @@
 0.7.0.0:
 - pass in user options with Options type
+- add an optional background color argument
+
 0.6.0.0:
 - use spatial-math 0.2, which uses types from `linear` package
 

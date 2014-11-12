@@ -30,7 +30,8 @@ import Vis.GlossColor
 defaultOptions :: Options
 defaultOptions =
   Options
-  { optWindowSize = Nothing
+  { optBackgroundColor = Nothing
+  , optWindowSize = Nothing
   , optWindowPosition = Nothing
   , optWindowName = "not-gloss"
   }

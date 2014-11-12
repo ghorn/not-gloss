@@ -15,13 +15,17 @@ import Graphics.UI.GLUT
 import Graphics.Rendering.OpenGL.Raw
 
 import Vis.VisObject ( VisObject(..), drawObjects, setPerspectiveMode )
+import qualified Vis.GlossColor as GC
 
 -- | user state and internal states
 type FullState a = (a, Float)
 
 data Options =
   Options
-  { optWindowSize :: Maybe (Int,Int)
+  { -- ^ optional background color
+    optBackgroundColor :: Maybe GC.Color
+    -- ^ optional (x,y) window size in pixels
+  , optWindowSize :: Maybe (Int,Int)
     -- ^ optional (x,y) window origin in pixels
   , optWindowPosition :: Maybe (Int,Int)
     -- ^ window name
@@ -47,7 +51,11 @@ myGlInit opts = do
   initialWindowPosition $= Position (fromIntegral xpos) (fromIntegral ypos)
   _ <- createWindow (optWindowName opts)
 
-  clearColor $= Color4 0 0 0 0
+  case optBackgroundColor opts of
+    Nothing  -> clearColor $= Color4 0 0 0 0
+    Just col -> clearColor $= Color4 (realToFrac r) (realToFrac g) (realToFrac b) (realToFrac a)
+      where
+        (r,g,b,a) = GC.rgbaOfColor col
   shadeModel $= Smooth
   depthFunc $= Just Less
   lighting $= Enabled
