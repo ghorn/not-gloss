@@ -1,6 +1,7 @@
 {-# OPTIONS_GHC -Wall #-}
 
-module Vis.Vis ( vis
+module Vis.Vis ( Options(..)
+               , vis
                , FullState
                ) where
 
@@ -15,11 +16,20 @@ import Graphics.Rendering.OpenGL.Raw
 
 import Vis.VisObject ( VisObject(..), drawObjects, setPerspectiveMode )
 
--- user state and internal states
+-- | user state and internal states
 type FullState a = (a, Float)
 
-myGlInit :: Maybe ((Int,Int), (Int,Int)) -> String -> IO ()
-myGlInit sizepos progName = do
+data Options =
+  Options
+  { optWindowSize :: Maybe (Int,Int)
+    -- ^ optional (x,y) window origin in pixels
+  , optWindowPosition :: Maybe (Int,Int)
+    -- ^ window name
+  , optWindowName :: String
+  } deriving Show
+
+myGlInit :: Options -> IO ()
+myGlInit opts = do
   initialDisplayMode $= [ DoubleBuffered, RGBAMode, WithDepthBuffer ]
 
   Size x y <- get screenSize
@@ -30,11 +40,12 @@ myGlInit sizepos progName = do
       y0 = intScale 0.05 y
       yf = intScale 0.95 y
 
-      ((xsize,ysize),(xpos,ypos)) = fromMaybe ((xf-x0,yf-y0), (x0,y0)) sizepos
+      (xsize, ysize) = fromMaybe (xf - x0, yf - y0) (optWindowSize opts)
+      (xpos, ypos) = fromMaybe (x0,y0) (optWindowPosition opts)
 
   initialWindowSize $= Size (fromIntegral xsize) (fromIntegral ysize)
   initialWindowPosition $= Position (fromIntegral xpos) (fromIntegral ypos)
-  _ <- createWindow progName
+  _ <- createWindow (optWindowName opts)
 
   clearColor $= Color4 0 0 0 0
   shadeModel $= Smooth
@@ -79,8 +90,7 @@ reshape size@(Size _ _) = do
 
 
 vis :: Real b =>
-       Maybe ((Int,Int),(Int,Int)) -- ^ optional (window size, window position)
-       -> String -- ^ window name
+       Options -- ^ user options
        -> Double -- ^ sample time
        -> a   -- ^ initial state
        -> (FullState a -> IO a)             -- ^ sim function
@@ -90,12 +100,12 @@ vis :: Real b =>
        -> Maybe (a -> Position -> a)              -- ^ motion callback
        -> Maybe (a -> Position -> a)              -- ^ passive motion callback
        -> IO ()
-vis sizepos windowname ts x0 userSimFun userDraw userSetCamera
+vis opts ts x0 userSimFun userDraw userSetCamera
   userKeyMouseCallback userMotionCallback userPassiveMotionCallback = do
   -- init glut/scene
   _ <- getArgsAndInitialize
   
-  myGlInit sizepos windowname
+  myGlInit opts
    
   -- create internal state
   let fullState0 = (x0, 0)
