@@ -1,7 +1,7 @@
 {-# OPTIONS_GHC -Wall #-}
 
 module Vis ( Options(..)
-           , defaultOptions
+           , defaultOpts
            , display
            , animate
            , simulate
@@ -27,8 +27,8 @@ import Vis.GlossColor
 -- Consider changing the window name with something like:
 --
 -- > myOptions = defaultOpts {optWindowName = "my rad program"}
-defaultOptions :: Options
-defaultOptions =
+defaultOpts :: Options
+defaultOpts =
   Options
   { optBackgroundColor = Nothing
   , optWindowSize = Nothing
