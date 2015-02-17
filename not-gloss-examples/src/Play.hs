@@ -3,12 +3,18 @@
 module Main ( main
             ) where
 
-import Linear
-import SpatialMath ( Euler(..), rotateXyzAboutZ, rotVecByEulerB2A )
-import Graphics.X11 ( initThreads )
-import Vis
-import Graphics.UI.GLUT hiding ( Plane, Sphere, motionCallback )
+import Linear ( V3(..), (*^) )
 import qualified Data.Set as Set
+import Graphics.X11 ( initThreads )
+import Graphics.UI.GLUT ( Cursor(..), Key(..), KeyState(..), Modifiers(..), Position(..)
+                        , Size(..), Vector3(..), Vertex3(..)
+                        , GLint
+                        , ($=)
+                        )
+import qualified Graphics.UI.GLUT as GLUT
+
+import SpatialMath ( Euler(..), rotateXyzAboutZ, rotVecByEulerB2A )
+import Vis
 
 import Control.Monad ( when )
 
@@ -29,18 +35,19 @@ toVertex :: (Real a, Fractional b) => V3 a -> Vertex3 b
 toVertex xyz = (\(V3 x y z) -> Vertex3 x y z) $ fmap realToFrac xyz
 
 setCamera :: PlayerState -> IO ()
-setCamera (Running (V3 x y z) _ euler) = lookAt (toVertex xyz0) (toVertex target) (Vector3 0 0 (-1))
+setCamera (Running (V3 x y z) _ euler) =
+  GLUT.lookAt (toVertex xyz0) (toVertex target) (Vector3 0 0 (-1))
   where
     xyz0 = V3 x y (z-faceHeight)
     target = xyz0 + rotVecByEulerB2A euler (V3 1 0 0)
 
 simfun :: Float -> GameState -> IO GameState
 simfun _ (GameState (Running pos _ euler0@(Euler yaw _ _)) keys lmp) = do
-  Size x y <- get windowSize
+  Size x y <- GLUT.get GLUT.windowSize
   let x' = (fromIntegral x) `div` 2
       y' = (fromIntegral y) `div` 2
 
-  when (Just (x',y') /= lmp) (pointerPosition $= (Position x' y'))
+  when (Just (x',y') /= lmp) (GLUT.pointerPosition $= (Position x' y'))
   return $ GameState (Running (pos + (ts *^ v)) v euler0) keys (Just (x',y'))
   where
     v = rotateXyzAboutZ (V3 (w-s) (d-a) 0) yaw

@@ -10,8 +10,12 @@ module Vis.VisObject ( VisObject(..)
 import Control.Monad ( when )
 import Data.Maybe ( fromJust, isJust )
 import Graphics.Rendering.OpenGL.Raw
-import Graphics.UI.GLUT hiding ( Points, Cylinder, Line, Plane, Cube, Sphere, Triangle )
 import qualified Graphics.UI.GLUT as GLUT
+import Graphics.UI.GLUT ( BitmapFont(..), Capability(..), Color4(..), Face(..)
+                        , Flavour(..), MatrixMode(..), PrimitiveMode(..), Size(..)
+                        , Vertex3(..), Vector3(..)
+                        , ($=)
+                        )
 
 import SpatialMath
 
@@ -21,10 +25,10 @@ glColorOfColor :: GlossColor.Color -> Color4 GLfloat
 glColorOfColor = (\(r,g,b,a) -> fmap realToFrac (Color4 r g b a)) . GlossColor.rgbaOfColor
 
 setColor :: GlossColor.Color -> IO ()
-setColor = color . glColorOfColor
+setColor = GLUT.color . glColorOfColor
 
 setMaterialDiffuse :: GlossColor.Color -> IO ()
-setMaterialDiffuse col = materialDiffuse Front $= (glColorOfColor col)
+setMaterialDiffuse col = GLUT.materialDiffuse Front $= (glColorOfColor col)
 
 data VisObject a = VisObjects [VisObject a]
                  | Trans (V3 a) (VisObject a)
@@ -54,11 +58,11 @@ deriving instance Functor VisObject
 
 setPerspectiveMode :: IO ()
 setPerspectiveMode = do
-  (_, Size w h) <- GLUT.get viewport
-  matrixMode $= Projection
-  loadIdentity
-  perspective 40 (fromIntegral w / fromIntegral h) 0.1 1000
-  matrixMode $= Modelview 0
+  (_, Size w h) <- GLUT.get GLUT.viewport
+  GLUT.matrixMode $= Projection
+  GLUT.loadIdentity
+  GLUT.perspective 40 (fromIntegral w / fromIntegral h) 0.1 1000
+  GLUT.matrixMode $= Modelview 0
 
 drawObjects :: VisObject GLdouble -> IO ()
 drawObjects objects = do
@@ -71,13 +75,13 @@ drawObject (VisObjects xs) = mapM_ drawObject xs
 
 -- list of objects
 drawObject (Trans (V3 x y z) visobj) =
-  preservingMatrix $ do
-    translate (Vector3 x y z :: Vector3 GLdouble)
+  GLUT.preservingMatrix $ do
+    GLUT.translate (Vector3 x y z :: Vector3 GLdouble)
     drawObject visobj
 
 drawObject (RotQuat (Quaternion q0 (V3 q1 q2 q3)) visobj) =
-  preservingMatrix $ do
-    rotate (2 * acos q0 *180/pi :: GLdouble) (Vector3 q1 q2 q3)
+  GLUT.preservingMatrix $ do
+    GLUT.rotate (2 * acos q0 *180/pi :: GLdouble) (Vector3 q1 q2 q3)
     drawObject visobj
 
 drawObject (RotDcm dcm visobject) =
@@ -87,22 +91,22 @@ drawObject (RotEulerRad euler visobj) =
   drawObject $ RotEulerDeg (fmap ((180/pi)*) euler) visobj
 
 drawObject (RotEulerDeg (Euler yaw pitch roll) visobj) =
-  preservingMatrix $ do
-    rotate yaw   (Vector3 0 0 1)
-    rotate pitch (Vector3 0 1 0)
-    rotate roll  (Vector3 1 0 0)
+  GLUT.preservingMatrix $ do
+    GLUT.rotate yaw   (Vector3 0 0 1)
+    GLUT.rotate pitch (Vector3 0 1 0)
+    GLUT.rotate roll  (Vector3 1 0 0)
     drawObject visobj
 
 drawObject (Scale (sx,sy,sz) visobj) =
-  preservingMatrix $ do
-    normalize $= Enabled
-    scale sx sy sz
+  GLUT.preservingMatrix $ do
+    GLUT.normalize $= Enabled
+    GLUT.scale sx sy sz
     drawObject visobj
-    normalize $= Disabled
+    GLUT.normalize $= Disabled
 
 -- triangle
 drawObject (Triangle (V3 x0 y0 z0) (V3 x1 y1 z1) (V3 x2 y2 z2) col) =
-  preservingMatrix $ do
+  GLUT.preservingMatrix $ do
     setMaterialDiffuse col
     setColor col
     glBegin gl_TRIANGLES
@@ -113,8 +117,8 @@ drawObject (Triangle (V3 x0 y0 z0) (V3 x1 y1 z1) (V3 x2 y2 z2) col) =
    
 -- quad
 drawObject (Quad (V3 x0 y0 z0) (V3 x1 y1 z1) (V3 x2 y2 z2) (V3 x3 y3 z3) col) =
-  preservingMatrix $ do
-    lighting $= Disabled
+  GLUT.preservingMatrix $ do
+    GLUT.lighting $= Disabled
     setColor col
     glBegin gl_QUADS
     glVertex3d x0 y0 z0
@@ -122,15 +126,15 @@ drawObject (Quad (V3 x0 y0 z0) (V3 x1 y1 z1) (V3 x2 y2 z2) (V3 x3 y3 z3) col) =
     glVertex3d x2 y2 z2
     glVertex3d x3 y3 z3
     glEnd
-    lighting $= Enabled
+    GLUT.lighting $= Enabled
 
 -- cylinder
 drawObject (Cylinder (height,radius) col) =
-  preservingMatrix $ do
+  GLUT.preservingMatrix $ do
     setMaterialDiffuse col
     setColor col
     
-    -- translate (Vector3 0 0 (-height/2) :: Vector3 GLdouble)
+    -- GLUT.translate (Vector3 0 0 (-height/2) :: Vector3 GLdouble)
 
     let nslices = 10 :: Int
         nstacks = 10 :: Int
@@ -171,10 +175,10 @@ drawObject (Cylinder (height,radius) col) =
 
 -- sphere
 drawObject (Sphere r flav col) =
-  preservingMatrix $ do
+  GLUT.preservingMatrix $ do
     setMaterialDiffuse col
     setColor col
-    renderObject flav (GLUT.Sphere' (realToFrac r) 20 20)
+    GLUT.renderObject flav (GLUT.Sphere' (realToFrac r) 20 20)
 
 -- ellipsoid
 drawObject (Ellipsoid (sx,sy,sz) flav col) = drawObject $ Scale (sx,sy,sz) $ Sphere 1 flav col
@@ -183,23 +187,23 @@ drawObject (Ellipsoid (sx,sy,sz) flav col) = drawObject $ Scale (sx,sy,sz) $ Sph
 drawObject (Box (dx,dy,dz) flav col) = drawObject $ Scale (dx,dy,dz) $ Cube 1 flav col
 
 drawObject (Cube r flav col) =
-  preservingMatrix $ do
+  GLUT.preservingMatrix $ do
     setMaterialDiffuse col
     setColor col
-    renderObject flav (GLUT.Cube (realToFrac r))
+    GLUT.renderObject flav (GLUT.Cube (realToFrac r))
 
 -- line
 drawObject (Line path col) =
-  preservingMatrix $ do
-    lighting $= Disabled
+  GLUT.preservingMatrix $ do
+    GLUT.lighting $= Disabled
     setColor col
-    renderPrimitive LineStrip $ mapM_ (\(V3 x' y' z') -> vertex $ Vertex3 x' y' z') path
-    lighting $= Enabled
+    GLUT.renderPrimitive LineStrip $ mapM_ (\(V3 x' y' z') -> GLUT.vertex $ Vertex3 x' y' z') path
+    GLUT.lighting $= Enabled
 
 -- line where you set the color at each vertex
 drawObject (Line' pathcols) =
-  preservingMatrix $ do
-    lighting $= Disabled
+  GLUT.preservingMatrix $ do
+    GLUT.lighting $= Disabled
     
     glBegin gl_LINE_STRIP
     let f (xyz, col) = do
@@ -209,11 +213,11 @@ drawObject (Line' pathcols) =
           glVertex3f x y z
     mapM_ f pathcols
     glEnd
-    lighting $= Enabled
+    GLUT.lighting $= Enabled
 
 -- plane
 drawObject (Plane (V3 x y z) col1 col2) =
-  preservingMatrix $ do
+  GLUT.preservingMatrix $ do
     let normInv = 1/(sqrt $ x*x + y*y + z*z)
         x' = x*normInv
         y' = y*normInv
@@ -221,7 +225,7 @@ drawObject (Plane (V3 x y z) col1 col2) =
         r  = 10
         n  = 5
         eps = 0.01
-    rotate ((acos z')*180/pi :: GLdouble) (Vector3 (-y') x' 0)
+    GLUT.rotate ((acos z')*180/pi :: GLdouble) (Vector3 (-y') x' 0)
 
     glBegin gl_QUADS
     setColor col2
@@ -250,7 +254,7 @@ drawObject (Plane (V3 x y z) col1 col2) =
 
 -- arrow
 drawObject (Arrow (size, aspectRatio) (V3 x y z) col) =
-  preservingMatrix $ do
+  GLUT.preservingMatrix $ do
     let numSlices = 8
         numStacks = 15
         cylinderRadius = 0.5*size/aspectRatio
@@ -261,56 +265,57 @@ drawObject (Arrow (size, aspectRatio) (V3 x y z) col) =
         rotAngle = acos(z/(sqrt(x*x + y*y + z*z) + 1e-15))*180/pi :: GLdouble
         rotAxis = Vector3 (-y) x 0
     
-    rotate rotAngle rotAxis
+    GLUT.rotate rotAngle rotAxis
     
     -- cylinder
     drawObject $ Cylinder (cylinderHeight, cylinderRadius) col
     -- cone
     setMaterialDiffuse col
     setColor col
-    translate (Vector3 0 0 cylinderHeight :: Vector3 GLdouble)
-    renderObject Solid (GLUT.Cone coneRadius coneHeight numSlices numStacks)
+    GLUT.translate (Vector3 0 0 cylinderHeight :: Vector3 GLdouble)
+    GLUT.renderObject Solid (GLUT.Cone coneRadius coneHeight numSlices numStacks)
 
-drawObject (Axes (size, aspectRatio)) = preservingMatrix $ do
+drawObject (Axes (size, aspectRatio)) = GLUT.preservingMatrix $ do
   let xAxis = Arrow (size, aspectRatio) (V3 1 0 0) (GlossColor.makeColor 1 0 0 1)
       yAxis = Arrow (size, aspectRatio) (V3 0 1 0) (GlossColor.makeColor 0 1 0 1)
       zAxis = Arrow (size, aspectRatio) (V3 0 0 1) (GlossColor.makeColor 0 0 1 1)
   drawObject $ VisObjects [xAxis, yAxis, zAxis]
 
-drawObject (Custom f) = preservingMatrix f
+drawObject (Custom f) = GLUT.preservingMatrix f
 
-drawObject (Text3d string (V3 x y z) font col) = preservingMatrix $ do
-  lighting $= Disabled
+drawObject (Text3d string (V3 x y z) font col) = GLUT.preservingMatrix $ do
+  GLUT.lighting $= Disabled
   setColor col
   glRasterPos3d x y z
-  renderString font string
-  lighting $= Enabled
+  GLUT.renderString font string
+  GLUT.lighting $= Enabled
 
-drawObject (Text2d string (x,y) font col) = preservingMatrix $ do
-  lighting $= Disabled
+drawObject (Text2d string (x,y) font col) = GLUT.preservingMatrix $ do
+  GLUT.lighting $= Disabled
   setColor col
 
-  matrixMode $= Projection
-  loadIdentity
+  GLUT.matrixMode $= Projection
+  GLUT.loadIdentity
 
-  (_, Size w h) <- get viewport
-  ortho2D 0 (fromIntegral w) 0 (fromIntegral h)
-  matrixMode $= Modelview 0
-  loadIdentity
+  (_, Size w h) <- GLUT.get GLUT.viewport
+  GLUT.ortho2D 0 (fromIntegral w) 0 (fromIntegral h)
+  GLUT.matrixMode $= Modelview 0
+  GLUT.loadIdentity
 
   glRasterPos2d x y
-  renderString font string
+  GLUT.renderString font string
 
   setPerspectiveMode
-  lighting $= Enabled
+  GLUT.lighting $= Enabled
 
-drawObject (Points xyzs ps col) =
-  preservingMatrix $ do
-    lighting $= Disabled
+drawObject (Vis.VisObject.Points xyzs ps col) =
+  GLUT.preservingMatrix $ do
+    GLUT.lighting $= Disabled
     setColor col
-    s' <- get pointSize
-    when (isJust ps) $ pointSize $= (fromJust ps)
-    renderPrimitive GLUT.Points $ mapM_ (\(V3 x' y' z') -> vertex $ Vertex3 x' y' z') xyzs
-    pointSize $= s'
-    lighting $= Enabled
+    s' <- GLUT.get GLUT.pointSize
+    when (isJust ps) $ GLUT.pointSize $= (fromJust ps)
+    GLUT.renderPrimitive GLUT.Points $
+      mapM_ (\(V3 x' y' z') -> GLUT.vertex $ Vertex3 x' y' z') xyzs
+    GLUT.pointSize $= s'
+    GLUT.lighting $= Enabled
 
