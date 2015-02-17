@@ -1,0 +1,51 @@
+name:                not-gloss-examples
+version:             0.5.0
+stability:           Experimental
+synopsis:            examples for not-gloss
+license:             BSD3
+license-file:        LICENSE
+author:              Greg Horn
+maintainer:          gregmainland@gmail.com
+-- copyright:           
+category:            Graphics
+build-type:          Simple
+cabal-version:       >=1.8
+
+extra-source-files:  changelog.txt
+
+executable           not-gloss-display
+  main-is:           src/Display.hs
+  build-depends:     not-gloss >= 0.7.0,
+                     linear >= 1.3.1,
+                     base >= 4.5 && < 5
+  ghc-options:       -threaded -O2
+
+executable           not-gloss-animate
+  main-is:           src/Animate.hs
+  build-depends:     not-gloss >= 0.7.0,
+                     linear >= 1.3.1,
+                     base >= 4.5 && < 5
+  ghc-options:       -threaded -O2
+
+executable           not-gloss-simulate
+  main-is:           src/Simulate.hs
+  build-depends:     not-gloss >= 0.7.0,
+                     linear >= 1.3.1,
+                     base >= 4.5 && < 5
+  ghc-options:       -threaded -O2
+
+executable           not-gloss-game
+  main-is:           src/Play.hs
+  build-depends:     not-gloss >= 0.7.0,
+                     spatial-math >= 0.2.0 && < 0.3,
+                     linear >= 1.3.1,
+                     GLUT,
+                     containers,
+                     X11,
+                     base >= 4.5 && < 5
+  ghc-options:       -threaded -O2
+
+
+source-repository head
+  type:     git
+  location: git://github.com/ghorn/not-gloss-examples.git
