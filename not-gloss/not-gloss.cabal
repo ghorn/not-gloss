@@ -26,6 +26,7 @@ build-type:          Simple
 cabal-version:       >=1.8
 
 library
+  hs-source-dirs:      src
   exposed-modules:     Vis
                        Vis.Camera
                        Vis.Interface
