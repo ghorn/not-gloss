@@ -48,7 +48,6 @@ data VisObject a = VisObjects [VisObject a]
                  | Text3d String (V3 a) BitmapFont GlossColor.Color
                  | Text2d String (a,a) BitmapFont GlossColor.Color
                  | Points [V3 a] (Maybe GLfloat) GlossColor.Color
-                 | Custom (IO ())
 
 deriving instance Functor VisObject
 
@@ -276,8 +275,6 @@ drawObject (Axes (size, aspectRatio)) = preservingMatrix $ do
       yAxis = Arrow (size, aspectRatio) (V3 0 1 0) (GlossColor.makeColor 0 1 0 1)
       zAxis = Arrow (size, aspectRatio) (V3 0 0 1) (GlossColor.makeColor 0 0 1 1)
   drawObject $ VisObjects [xAxis, yAxis, zAxis]
-
-drawObject (Custom f) = preservingMatrix f
 
 drawObject (Text3d string (V3 x y z) font col) = preservingMatrix $ do
   lighting $= Disabled
