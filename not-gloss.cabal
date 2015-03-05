@@ -39,7 +39,8 @@ library
                        GLUT >= 2.3.0,
                        time >= 1.4.0,
                        OpenGLRaw >= 1.2.0,
-                       spatial-math >= 0.2.0
+                       spatial-math >= 0.2.1.1,
+                       cereal
 
   ghc-options: -O2
 

@@ -1,17 +1,24 @@
-{-# OPTIONS_GHC -Wall #-}
+{-# OPTIONS_GHC -Wall -fno-warn-orphans #-}
 {-# Language StandaloneDeriving #-}
 {-# Language DeriveFunctor #-}
+{-# Language DeriveGeneric #-}
+{-# Language TypeSynonymInstances #-}
 
 module Vis.VisObject ( VisObject(..)
                      , drawObjects
                      , setPerspectiveMode
                      ) where
 
+import GHC.Generics ( Generic )
+
 import Control.Monad ( when )
 import Data.Maybe ( fromJust, isJust )
+import Data.Word ( Word8 )
+import qualified Data.Serialize as S
 import Graphics.Rendering.OpenGL.Raw
 import Graphics.UI.GLUT hiding ( Points, Cylinder, Line, Plane, Cube, Sphere, Triangle )
 import qualified Graphics.UI.GLUT as GLUT
+import Foreign.C.Types ( CFloat(..) )
 
 import SpatialMath
 
@@ -48,8 +55,48 @@ data VisObject a = VisObjects [VisObject a]
                  | Text3d String (V3 a) BitmapFont GlossColor.Color
                  | Text2d String (a,a) BitmapFont GlossColor.Color
                  | Points [V3 a] (Maybe GLfloat) GlossColor.Color
+                 deriving (Generic, Functor)
 
-deriving instance Functor VisObject
+instance S.Serialize Flavour where
+  put Solid     = S.put False
+  put Wireframe = S.put True
+  get = do
+    b <- S.get
+    return $ case b of
+      False -> Solid
+      True  -> Wireframe
+instance S.Serialize BitmapFont where
+  put Fixed8By13   = S.put (0 :: Word8)
+  put Fixed9By15   = S.put (1 :: Word8)
+  put TimesRoman10 = S.put (2 :: Word8)
+  put TimesRoman24 = S.put (3 :: Word8)
+  put Helvetica10  = S.put (4 :: Word8)
+  put Helvetica12  = S.put (5 :: Word8)
+  put Helvetica18  = S.put (6 :: Word8)
+  get = do
+    k <- S.get :: S.Get Word8
+    return $ case k of
+      0 -> Fixed8By13
+      1 -> Fixed9By15
+      2 -> TimesRoman10
+      3 -> TimesRoman24
+      4 -> Helvetica10
+      5 -> Helvetica12
+      6 -> Helvetica18
+      _ -> error $ "deserializing BitmapFont got bad value (" ++ show k ++ ")"
+
+instance S.Serialize (GlossColor.Color) where
+  get = do
+    (x,y,z,a) <- S.get
+    return $ GlossColor.makeColor x y z a
+  put x = S.put (GlossColor.rgbaOfColor x)
+instance S.Serialize (GLfloat) where
+  get = fmap CFloat S.get
+  put (CFloat x) = S.put x
+
+instance S.Serialize a => S.Serialize (Quaternion a)
+instance S.Serialize a => S.Serialize (V3 a)
+instance S.Serialize a => S.Serialize (VisObject a)
 
 setPerspectiveMode :: IO ()
 setPerspectiveMode = do
