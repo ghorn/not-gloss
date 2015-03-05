@@ -8,7 +8,12 @@ module Vis.Camera ( Camera0(..)
                   , cameraKeyboardMouse
                   ) where
 
-import Graphics.UI.GLUT
+import Graphics.UI.GLUT ( GLdouble, GLint
+                        , Vector3(..), Vertex3(..)
+                        , Position(..), MouseButton(..), Key(..), KeyState(..)
+                        )
+import qualified Graphics.UI.GLUT as GLUT
+
 import SpatialMath ( V3(..) )
 
 data Camera0 = Camera0 { phi0 :: GLdouble
@@ -38,7 +43,7 @@ makeCamera camera0 = Camera { phi   = phi0 camera0
                             }
 
 setCamera :: Camera -> IO ()
-setCamera camera = lookAt (Vertex3 xc yc zc) (Vertex3 x0 y0 z0) (Vector3 0 0 (-1))
+setCamera camera = GLUT.lookAt (Vertex3 xc yc zc) (Vertex3 x0 y0 z0) (Vector3 0 0 (-1))
   where
     V3 x0 y0 z0 = pos camera
     phi'   = phi   camera

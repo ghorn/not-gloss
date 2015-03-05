@@ -11,7 +11,14 @@ import System.Exit ( exitSuccess )
 import Data.Time.Clock ( getCurrentTime, diffUTCTime, addUTCTime )
 import Control.Concurrent ( MVar, readMVar, swapMVar, newMVar, takeMVar, putMVar, forkIO, threadDelay )
 import Control.Monad ( unless, forever )
-import Graphics.UI.GLUT
+import Graphics.UI.GLUT ( Capability(..), ClearBuffer(..), Color4(..), ColorMaterialParameter(..)
+                        , ComparisonFunction(..), Cursor(..), DisplayMode(..), Face(..)
+                        , Key(..), KeyState(..), Light(..), Modifiers(..), Position(..)
+                        , ShadingModel(..), Size(..)
+                        , DisplayCallback, ReshapeCallback
+                        , ($=)
+                        )
+import qualified Graphics.UI.GLUT as GLUT
 import Graphics.Rendering.OpenGL.Raw
 
 import Vis.VisObject ( VisObject(..), drawObjects, setPerspectiveMode )
@@ -34,9 +41,9 @@ data Options =
 
 myGlInit :: Options -> IO ()
 myGlInit opts = do
-  initialDisplayMode $= [ DoubleBuffered, RGBAMode, WithDepthBuffer ]
+  GLUT.initialDisplayMode $= [ DoubleBuffered, RGBAMode, WithDepthBuffer ]
 
-  Size x y <- get screenSize
+  Size x y <- GLUT.get GLUT.screenSize
   putStrLn $ "screen resolution " ++ show x ++ "x" ++ show y
   let intScale d i = round $ d*(realToFrac i :: Double)
       x0 = intScale 0.3 x
@@ -47,35 +54,35 @@ myGlInit opts = do
       (xsize, ysize) = fromMaybe (xf - x0, yf - y0) (optWindowSize opts)
       (xpos, ypos) = fromMaybe (x0,y0) (optWindowPosition opts)
 
-  initialWindowSize $= Size (fromIntegral xsize) (fromIntegral ysize)
-  initialWindowPosition $= Position (fromIntegral xpos) (fromIntegral ypos)
-  _ <- createWindow (optWindowName opts)
+  GLUT.initialWindowSize $= Size (fromIntegral xsize) (fromIntegral ysize)
+  GLUT.initialWindowPosition $= Position (fromIntegral xpos) (fromIntegral ypos)
+  _ <- GLUT.createWindow (optWindowName opts)
 
   case optBackgroundColor opts of
-    Nothing  -> clearColor $= Color4 0 0 0 0
-    Just col -> clearColor $= Color4 (realToFrac r) (realToFrac g) (realToFrac b) (realToFrac a)
+    Nothing  -> GLUT.clearColor $= Color4 0 0 0 0
+    Just col -> GLUT.clearColor $= Color4 (realToFrac r) (realToFrac g) (realToFrac b) (realToFrac a)
       where
         (r,g,b,a) = GC.rgbaOfColor col
-  shadeModel $= Smooth
-  depthFunc $= Just Less
-  lighting $= Enabled
-  light (Light 0) $= Enabled
-  ambient (Light 0) $= Color4 1 1 1 1
+  GLUT.shadeModel $= Smooth
+  GLUT.depthFunc $= Just Less
+  GLUT.lighting $= Enabled
+  GLUT.light (Light 0) $= Enabled
+  GLUT.ambient (Light 0) $= Color4 1 1 1 1
    
-  materialDiffuse Front $= Color4 0.5 0.5 0.5 1
-  materialSpecular Front $= Color4 1 1 1 1
-  materialShininess Front $= 100
-  colorMaterial $= Just (Front, Diffuse)
+  GLUT.materialDiffuse Front $= Color4 0.5 0.5 0.5 1
+  GLUT.materialSpecular Front $= Color4 1 1 1 1
+  GLUT.materialShininess Front $= 100
+  GLUT.colorMaterial $= Just (Front, Diffuse)
 
   glEnable gl_BLEND
   glBlendFunc gl_SRC_ALPHA gl_ONE_MINUS_SRC_ALPHA
 
 drawScene :: MVar (FullState a) -> MVar Bool -> IO () -> (FullState a -> IO ()) -> DisplayCallback
 drawScene stateMVar visReadyMVar setCameraFun userDrawFun = do
-   clear [ ColorBuffer, DepthBuffer ]
+   GLUT.clear [ ColorBuffer, DepthBuffer ]
    
    -- draw the scene
-   preservingMatrix $ do
+   GLUT.preservingMatrix $ do
      -- set the camera's position and orientation
      setCameraFun
      
@@ -83,18 +90,18 @@ drawScene stateMVar visReadyMVar setCameraFun userDrawFun = do
      state <- readMVar stateMVar
      userDrawFun state
 
-   flush
-   swapBuffers
+   GLUT.flush
+   GLUT.swapBuffers
    _ <- swapMVar visReadyMVar True
-   postRedisplay Nothing
+   GLUT.postRedisplay Nothing
 
 
 reshape :: ReshapeCallback
 reshape size@(Size _ _) = do
-   viewport $= (Position 0 0, size)
+   GLUT.viewport $= (Position 0 0, size)
    setPerspectiveMode
-   loadIdentity
-   postRedisplay Nothing
+   GLUT.loadIdentity
+   GLUT.postRedisplay Nothing
 
 
 vis :: Real b =>
@@ -111,7 +118,7 @@ vis :: Real b =>
 vis opts ts x0 userSimFun userDraw userSetCamera
   userKeyMouseCallback userMotionCallback userPassiveMotionCallback = do
   -- init glut/scene
-  _ <- getArgsAndInitialize
+  _ <- GLUT.getArgsAndInitialize
   
   myGlInit opts
    
@@ -128,7 +135,7 @@ vis opts ts x0 userSimFun userDraw userSetCamera
         (visobs,cursor') <- userDraw x
         drawObjects $ (fmap realToFrac) visobs
         case cursor' of Nothing -> return ()
-                        Just cursor'' -> cursor $= cursor''
+                        Just cursor'' -> GLUT.cursor $= cursor''
 
       setCamera = do
         (state,_) <- readMVar stateMVar
@@ -142,30 +149,30 @@ vis opts ts x0 userSimFun userDraw userSetCamera
           Just cb -> do
             (state0',time) <- takeMVar stateMVar
             putMVar stateMVar (cb state0' k0 k1 k2 k3, time)
-            postRedisplay Nothing
+            GLUT.postRedisplay Nothing
 
       motionCallback' pos = case userMotionCallback of
         Nothing -> return ()
         Just cb -> do
           (state0',ts') <- takeMVar stateMVar
           putMVar stateMVar (cb state0' pos, ts')
-          postRedisplay Nothing
+          GLUT.postRedisplay Nothing
 
       passiveMotionCallback' pos = case userPassiveMotionCallback of
         Nothing -> return ()
         Just cb -> do
           (state0',ts') <- takeMVar stateMVar
           putMVar stateMVar (cb state0' pos, ts')
-          postRedisplay Nothing
+          GLUT.postRedisplay Nothing
 
-  displayCallback $= drawScene stateMVar visReadyMVar setCamera makePictures
-  reshapeCallback $= Just reshape
-  keyboardMouseCallback $= Just exitOverride
-  motionCallback $= Just motionCallback'
-  passiveMotionCallback $= Just passiveMotionCallback'
+  GLUT.displayCallback $= drawScene stateMVar visReadyMVar setCamera makePictures
+  GLUT.reshapeCallback $= Just reshape
+  GLUT.keyboardMouseCallback $= Just exitOverride
+  GLUT.motionCallback $= Just motionCallback'
+  GLUT.passiveMotionCallback $= Just passiveMotionCallback'
 
   -- start main loop
-  mainLoop
+  GLUT.mainLoop
 
 simThread :: MVar (FullState a) -> MVar Bool -> (FullState a -> IO a) -> Double -> IO ()
 simThread stateMVar visReadyMVar userSimFun ts = do
@@ -184,7 +191,7 @@ simThread stateMVar visReadyMVar userSimFun ts = do
   forever $ do
     -- calculate how much longer to sleep before taking a timestep
     currentTime <- getCurrentTime
-    lastTime <- get lastTimeRef
+    lastTime <- GLUT.get lastTimeRef
     let usRemaining :: Int
         usRemaining = round $ 1e6*(ts - realToFrac (diffUTCTime currentTime lastTime))
         secondsSinceStart = realToFrac (diffUTCTime currentTime t0)
@@ -202,7 +209,7 @@ simThread stateMVar visReadyMVar userSimFun ts = do
         nextState <- getNextState
         _ <- nextState `seq` putState nextState
 
-        postRedisplay Nothing
+        GLUT.postRedisplay Nothing
        
       -- need to sleep longer
       else threadDelay usRemaining
