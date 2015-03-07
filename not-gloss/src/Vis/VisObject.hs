@@ -15,6 +15,7 @@ import Control.Monad ( when )
 import Data.Maybe ( fromJust, isJust )
 import Data.Word ( Word8 )
 import qualified Data.Serialize as S
+import qualified Data.Binary as B
 import Graphics.Rendering.OpenGL.Raw
 import qualified Graphics.UI.GLUT as GLUT
 import Foreign.C.Types ( CFloat(..) )
@@ -61,46 +62,78 @@ data VisObject a = VisObjects [VisObject a]
                  | Points [V3 a] (Maybe GLfloat) GlossColor.Color
                  deriving (Generic, Functor)
 
+toFlavour :: Bool -> Flavour
+toFlavour False = Solid
+toFlavour True = Wireframe
+
+fromFlavour :: Flavour -> Bool
+fromFlavour Solid = False
+fromFlavour Wireframe = True
+
 instance S.Serialize Flavour where
-  put Solid     = S.put False
-  put Wireframe = S.put True
-  get = do
-    b <- S.get
-    return $ case b of
-      False -> Solid
-      True  -> Wireframe
+  put = S.put . fromFlavour
+  get = fmap toFlavour S.get
+instance B.Binary Flavour where
+  put = B.put . fromFlavour
+  get = fmap toFlavour B.get
+
+
+fromBitmapFont :: BitmapFont -> Word8
+fromBitmapFont Fixed8By13   = 0 :: Word8
+fromBitmapFont Fixed9By15   = 1 :: Word8
+fromBitmapFont TimesRoman10 = 2 :: Word8
+fromBitmapFont TimesRoman24 = 3 :: Word8
+fromBitmapFont Helvetica10  = 4 :: Word8
+fromBitmapFont Helvetica12  = 5 :: Word8
+fromBitmapFont Helvetica18  = 6 :: Word8
+
+toBitmapFont :: Word8 -> BitmapFont
+toBitmapFont 0 = Fixed8By13
+toBitmapFont 1 = Fixed9By15
+toBitmapFont 2 = TimesRoman10
+toBitmapFont 3 = TimesRoman24
+toBitmapFont 4 = Helvetica10
+toBitmapFont 5 = Helvetica12
+toBitmapFont 6 = Helvetica18
+toBitmapFont k = error $ "deserializing BitmapFont got bad value (" ++ show k ++ ")"
+
 instance S.Serialize BitmapFont where
-  put Fixed8By13   = S.put (0 :: Word8)
-  put Fixed9By15   = S.put (1 :: Word8)
-  put TimesRoman10 = S.put (2 :: Word8)
-  put TimesRoman24 = S.put (3 :: Word8)
-  put Helvetica10  = S.put (4 :: Word8)
-  put Helvetica12  = S.put (5 :: Word8)
-  put Helvetica18  = S.put (6 :: Word8)
-  get = do
-    k <- S.get :: S.Get Word8
-    return $ case k of
-      0 -> Fixed8By13
-      1 -> Fixed9By15
-      2 -> TimesRoman10
-      3 -> TimesRoman24
-      4 -> Helvetica10
-      5 -> Helvetica12
-      6 -> Helvetica18
-      _ -> error $ "deserializing BitmapFont got bad value (" ++ show k ++ ")"
+  put = S.put . fromBitmapFont
+  get = fmap toBitmapFont S.get
+instance B.Binary BitmapFont where
+  put = B.put . fromBitmapFont
+  get = fmap toBitmapFont B.get
+
+
+fromColor :: GlossColor.Color -> (Float,Float,Float,Float)
+fromColor = GlossColor.rgbaOfColor
+
+toColor :: (Float,Float,Float,Float) -> GlossColor.Color
+toColor (r,g,b,a) = GlossColor.makeColor r g b a
 
 instance S.Serialize (GlossColor.Color) where
-  get = do
-    (x,y,z,a) <- S.get
-    return $ GlossColor.makeColor x y z a
-  put x = S.put (GlossColor.rgbaOfColor x)
-instance S.Serialize (GLfloat) where
-  get = fmap CFloat S.get
-  put (CFloat x) = S.put x
+  put = S.put . fromColor
+  get = fmap toColor S.get
+instance B.Binary (GlossColor.Color) where
+  put = B.put . fromColor
+  get = fmap toColor B.get
 
-instance S.Serialize a => S.Serialize (Quaternion a)
-instance S.Serialize a => S.Serialize (V3 a)
+
+fromCFloat :: CFloat -> Float
+fromCFloat (CFloat x) = x
+
+toCFloat :: Float -> CFloat
+toCFloat = CFloat
+
+instance S.Serialize (GLfloat) where
+  put = S.put . fromCFloat
+  get = fmap toCFloat S.get
+instance B.Binary (GLfloat) where
+  put = B.put . fromCFloat
+  get = fmap toCFloat B.get
+
 instance S.Serialize a => S.Serialize (VisObject a)
+instance B.Binary a => B.Binary (VisObject a)
 
 setPerspectiveMode :: IO ()
 setPerspectiveMode = do
