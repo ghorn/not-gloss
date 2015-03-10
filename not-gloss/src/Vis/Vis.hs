@@ -68,7 +68,7 @@ myGlInit opts = do
   GLUT.lighting $= Enabled
   GLUT.light (Light 0) $= Enabled
   GLUT.ambient (Light 0) $= Color4 1 1 1 1
-   
+
   GLUT.materialDiffuse Front $= Color4 0.5 0.5 0.5 1
   GLUT.materialSpecular Front $= Color4 1 1 1 1
   GLUT.materialShininess Front $= 100
@@ -80,12 +80,12 @@ myGlInit opts = do
 drawScene :: MVar (FullState a) -> MVar Bool -> IO () -> (FullState a -> IO ()) -> DisplayCallback
 drawScene stateMVar visReadyMVar setCameraFun userDrawFun = do
    GLUT.clear [ ColorBuffer, DepthBuffer ]
-   
+
    -- draw the scene
    GLUT.preservingMatrix $ do
      -- set the camera's position and orientation
      setCameraFun
-     
+
      -- call user function
      state <- readMVar stateMVar
      userDrawFun state
@@ -119,9 +119,9 @@ vis opts ts x0 userSimFun userDraw userSetCamera
   userKeyMouseCallback userMotionCallback userPassiveMotionCallback = do
   -- init glut/scene
   _ <- GLUT.getArgsAndInitialize
-  
+
   myGlInit opts
-   
+
   -- create internal state
   let fullState0 = (x0, 0)
   stateMVar <- newMVar fullState0
@@ -129,7 +129,7 @@ vis opts ts x0 userSimFun userDraw userSetCamera
 
   -- start sim thread
   _ <- forkIO $ simThread stateMVar visReadyMVar userSimFun ts
-  
+
   -- setup the callbacks
   let makePictures x = do
         (visobs,cursor') <- userDraw x
@@ -177,14 +177,14 @@ vis opts ts x0 userSimFun userDraw userSetCamera
 simThread :: MVar (FullState a) -> MVar Bool -> (FullState a -> IO a) -> Double -> IO ()
 simThread stateMVar visReadyMVar userSimFun ts = do
   let waitUntilDisplayIsReady :: IO ()
-      waitUntilDisplayIsReady = do 
+      waitUntilDisplayIsReady = do
         visReady <- readMVar visReadyMVar
         unless visReady $ do
           threadDelay 10000
           waitUntilDisplayIsReady
-  
+
   waitUntilDisplayIsReady
-  
+
   t0 <- getCurrentTime
   lastTimeRef <- newIORef t0
 
@@ -195,7 +195,7 @@ simThread stateMVar visReadyMVar userSimFun ts = do
     let usRemaining :: Int
         usRemaining = round $ 1e6*(ts - realToFrac (diffUTCTime currentTime lastTime))
         secondsSinceStart = realToFrac (diffUTCTime currentTime t0)
-    
+
     if usRemaining <= 0
       -- slept for long enough, do a sim iteration
       then do
@@ -210,6 +210,6 @@ simThread stateMVar visReadyMVar userSimFun ts = do
         _ <- nextState `seq` putState nextState
 
         GLUT.postRedisplay Nothing
-       
+
       -- need to sleep longer
       else threadDelay usRemaining
