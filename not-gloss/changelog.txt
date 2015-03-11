@@ -1,3 +1,6 @@
+0.7.1.0:
+- add an interface which makes a movie
+
 0.7.0.0:
 - pass in user options with Options type
 - add an optional background color argument

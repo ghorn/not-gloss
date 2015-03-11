@@ -41,14 +41,10 @@ type FullState a = (a, Float)
 
 data Options =
   Options
-  { -- ^ optional background color
-    optBackgroundColor :: Maybe GC.Color
-    -- ^ optional (x,y) window size in pixels
-  , optWindowSize :: Maybe (Int,Int)
-    -- ^ optional (x,y) window origin in pixels
-  , optWindowPosition :: Maybe (Int,Int)
-    -- ^ window name
-  , optWindowName :: String
+  { optBackgroundColor :: Maybe GC.Color -- ^ optional background color
+  , optWindowSize :: Maybe (Int,Int) -- ^ optional (x,y) window size in pixels
+  , optWindowPosition :: Maybe (Int,Int) -- ^ optional (x,y) window origin in pixels
+  , optWindowName :: String -- ^ window name
   } deriving Show
 
 myGlInit :: Options -> IO ()
