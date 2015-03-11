@@ -9,6 +9,7 @@ module Vis ( Options(..)
            , animateIO
            , simulateIO
            , playIO
+           , visMovie
            , VisObject(..)
            , SpecialKey(..)
            , BitmapFont(..)
@@ -18,7 +19,7 @@ module Vis ( Options(..)
 
 import Graphics.UI.GLUT ( SpecialKey(..), BitmapFont(..), Flavour(..) )
 
-import Vis.Vis ( Options(..) )
+import Vis.Vis ( Options(..), visMovie )
 import Vis.Interface ( display, animate, simulate, play, animateIO, simulateIO, playIO )
 import Vis.VisObject ( VisObject(..) )
 import Vis.GlossColor

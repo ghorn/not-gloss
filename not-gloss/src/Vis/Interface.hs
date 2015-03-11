@@ -12,7 +12,7 @@ module Vis.Interface ( display
 import Graphics.UI.GLUT ( Key, KeyState, Position, Modifiers, Cursor(..) )
 
 import Vis.Vis ( Options, vis )
-import Vis.Camera ( makeCamera, Camera0(..), setCamera, cameraMotion, cameraKeyboardMouse )
+import Vis.Camera ( Camera, Camera0(..), makeCamera, setCamera, cameraMotion, cameraKeyboardMouse )
 import Vis.VisObject ( VisObject(..) )
 
 -- | draw a static image
@@ -48,6 +48,7 @@ animateIO opts userDrawFun =
     simFun (state,_) = return state
     kmCallback (state, camState) k0 k1 _ _ = (state, cameraKeyboardMouse camState k0 k1)
     motionCallback (state, cameraState) pos = (state, cameraMotion cameraState pos)
+    setCameraFun :: ((), Camera) -> IO ()
     setCameraFun (_,cameraState) = setCamera cameraState
 
 
