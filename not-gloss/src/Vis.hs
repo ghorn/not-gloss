@@ -1,6 +1,7 @@
 {-# OPTIONS_GHC -Wall #-}
 
 module Vis ( Options(..)
+           , Camera0(..)
            , defaultOpts
            , display
            , animate
@@ -20,6 +21,7 @@ module Vis ( Options(..)
 import Graphics.UI.GLUT ( SpecialKey(..), BitmapFont(..), Flavour(..) )
 
 import Vis.Vis ( Options(..), visMovie )
+import Vis.Camera ( Camera0(..) )
 import Vis.Interface ( display, animate, simulate, play, animateIO, simulateIO, playIO )
 import Vis.VisObject ( VisObject(..) )
 import Vis.GlossColor
@@ -35,4 +37,5 @@ defaultOpts =
   , optWindowSize = Nothing
   , optWindowPosition = Nothing
   , optWindowName = "not-gloss"
+  , optInitialCamera = Nothing
   }

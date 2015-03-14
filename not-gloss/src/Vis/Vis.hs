@@ -45,6 +45,7 @@ data Options =
   , optWindowSize :: Maybe (Int,Int) -- ^ optional (x,y) window size in pixels
   , optWindowPosition :: Maybe (Int,Int) -- ^ optional (x,y) window origin in pixels
   , optWindowName :: String -- ^ window name
+  , optInitialCamera :: Maybe Camera0 -- ^ initial camera position
   } deriving Show
 
 myGlInit :: Options -> IO ()
@@ -283,11 +284,11 @@ visMovie opts toFilename ts objectsToDraw maybeCursor = do
 
   myGlInit opts
 
-  let cameraState0 =
-        makeCamera $
+  let defaultCam =
         Camera0 { phi0 = 60
                 , theta0 = 20
                 , rho0 = 7}
+      cameraState0 = makeCamera $ fromMaybe defaultCam (optInitialCamera opts)
 
   -- create internal state
   areWeDrawingRef <- newIORef False

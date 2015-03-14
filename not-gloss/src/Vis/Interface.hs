@@ -9,9 +9,10 @@ module Vis.Interface ( display
                      , playIO
                      ) where
 
+import Data.Maybe ( fromMaybe )
 import Graphics.UI.GLUT ( Key, KeyState, Position, Modifiers, Cursor(..) )
 
-import Vis.Vis ( Options, vis )
+import Vis.Vis ( Options(..), vis )
 import Vis.Camera ( Camera, Camera0(..), makeCamera, setCamera, cameraMotion, cameraKeyboardMouse )
 import Vis.VisObject ( VisObject(..) )
 
@@ -39,9 +40,7 @@ animateIO opts userDrawFun =
   where
     ts = 0.01
     userState0 = ()
-    cameraState0 = makeCamera $ Camera0 { phi0 = 60
-                                        , theta0 = 20
-                                        , rho0 = 7}
+    cameraState0 = makeCamera $ fromMaybe defaultCamera (optInitialCamera opts)
     drawFun (_,time) = do
       obs <- userDrawFun time
       return (obs, Nothing)
@@ -81,9 +80,7 @@ simulateIO opts ts userState0 userDrawFun userSimFun =
     simFun ((userState,cameraState),time) = do
       nextUserState <- userSimFun time userState
       return (nextUserState, cameraState)
-    cameraState0 = makeCamera $ Camera0 { phi0 = 60
-                                        , theta0 = 20
-                                        , rho0 = 7}
+    cameraState0 = makeCamera $ fromMaybe defaultCamera (optInitialCamera opts)
     kmCallback (state, camState) k0 k1 _ _ = (state, cameraKeyboardMouse camState k0 k1)
     motionCallback (state, cameraState) pos = (state, cameraMotion cameraState pos)
     setCameraFun (_,cameraState) = setCamera cameraState
@@ -125,3 +122,11 @@ playIO opts ts userState0 userDrawFun userSimFun =
   where
     drawFun (userState, _) = userDrawFun userState
     simFun (userState,time) = userSimFun time userState
+
+
+defaultCamera :: Camera0
+defaultCamera =
+  Camera0
+  { phi0 = 60
+  , theta0 = 20
+  , rho0 = 7}

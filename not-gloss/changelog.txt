@@ -1,3 +1,6 @@
+0.7.2.0:
+- add option to set initial camera position
+
 0.7.1.0:
 - add an interface which makes a movie
 

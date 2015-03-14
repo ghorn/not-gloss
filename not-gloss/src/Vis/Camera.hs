@@ -19,7 +19,7 @@ import SpatialMath ( V3(..) )
 data Camera0 = Camera0 { phi0 :: GLdouble
                        , theta0 :: GLdouble
                        , rho0 :: GLdouble
-                       }
+                       } deriving Show
 
 data Camera = Camera { phi :: GLdouble
                      , theta :: GLdouble
