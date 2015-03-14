@@ -53,7 +53,6 @@ myGlInit opts = do
   GLUT.initialDisplayMode $= [ DoubleBuffered, RGBAMode, WithDepthBuffer ]
 
   Size x y <- GLUT.get GLUT.screenSize
-  putStrLn $ "screen resolution " ++ show x ++ "x" ++ show y
   let intScale d i = round $ d*(realToFrac i :: Double)
       x0 = intScale 0.3 x
       xf = intScale 0.95 x
