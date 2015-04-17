@@ -206,7 +206,7 @@ drawObject (Triangle (V3 x0 y0 z0) (V3 x1 y1 z1) (V3 x2 y2 z2) col) =
     glVertex3d x1 y1 z1
     glVertex3d x2 y2 z2
     glEnd
-   
+
 -- quad
 drawObject (Quad (V3 x0 y0 z0) (V3 x1 y1 z1) (V3 x2 y2 z2) (V3 x3 y3 z3) col) =
   GLUT.preservingMatrix $ do
@@ -225,7 +225,7 @@ drawObject (Cylinder (height,radius) col) =
   GLUT.preservingMatrix $ do
     setMaterialDiffuse col
     setColor col
-    
+
     -- GLUT.translate (Vector3 0 0 (-height/2) :: Vector3 GLdouble)
 
     let nslices = 10 :: Int
@@ -236,7 +236,7 @@ drawObject (Cylinder (height,radius) col) =
           where
             angle = 2*pi/(fromIntegral nslices)
             angles = reverse $ map ((angle*) . fromIntegral) [0..(nslices+1)]
-            
+
     -- Cover the base and top
     glBegin gl_TRIANGLE_FAN
     glNormal3d 0 0 (-1)
@@ -296,7 +296,7 @@ drawObject (Line path col) =
 drawObject (Line' pathcols) =
   GLUT.preservingMatrix $ do
     GLUT.lighting $= Disabled
-    
+
     glBegin gl_LINE_STRIP
     let f (xyz, col) = do
           let V3 x y z = fmap realToFrac xyz
@@ -340,7 +340,7 @@ drawObject (Plane (V3 x y z) col1 col2) =
                                      ] | x0 <- [-r,-r+r/n..r], y0 <- [-r,-r+r/n..r]]
     drawWithEps eps
     drawWithEps (-eps)
-    
+
     glEnable gl_BLEND
 
 
@@ -356,9 +356,9 @@ drawObject (Arrow (size, aspectRatio) (V3 x y z) col) =
 
         rotAngle = acos(z/(sqrt(x*x + y*y + z*z) + 1e-15))*180/pi :: GLdouble
         rotAxis = Vector3 (-y) x 0
-    
+
     GLUT.rotate rotAngle rotAxis
-    
+
     -- cylinder
     drawObject $ Cylinder (cylinderHeight, cylinderRadius) col
     -- cone
