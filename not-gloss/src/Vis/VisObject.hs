@@ -6,19 +6,26 @@
 
 module Vis.VisObject ( VisObject(..)
                      , drawObjects
+                     , LoadedObjModel
+                     , loadObjModel
                      , setPerspectiveMode
                      ) where
 
 import GHC.Generics ( Generic )
 
 import Control.Monad ( when )
+import qualified Data.Foldable as F
 import Data.Maybe ( fromJust, isJust )
 import Data.Word ( Word8 )
+import qualified Data.Vector.Storable as VS
 import qualified Data.Serialize as S
 import qualified Data.Binary as B
+import Data.Vector.Cereal ()
+import Data.Vector.Binary ()
 import Graphics.Rendering.OpenGL.Raw
+import qualified Graphics.Rendering.OpenGL as GL
 import qualified Graphics.UI.GLUT as GLUT
-import Foreign.C.Types ( CFloat(..) )
+import Foreign.C.Types ( CFloat(..), CInt(..) )
 import Graphics.UI.GLUT ( BitmapFont(..), Capability(..), Color4(..), Face(..)
                         , Flavour(..), MatrixMode(..), PrimitiveMode(..), Size(..)
                         , Vertex3(..), Vector3(..)
@@ -60,7 +67,13 @@ data VisObject a = VisObjects [VisObject a]
                  | Text3d String (V3 a) BitmapFont GlossColor.Color
                  | Text2d String (a,a) BitmapFont GlossColor.Color
                  | Points [V3 a] (Maybe GLfloat) GlossColor.Color
+                 | ObjModel LoadedObjModel GlossColor.Color
                  deriving (Generic, Functor)
+
+data LoadedObjModel = LoadedObjModel (VS.Vector Double) (VS.Vector Double) Int deriving (Generic)
+
+instance S.Serialize LoadedObjModel
+instance B.Binary LoadedObjModel
 
 toFlavour :: Bool -> Flavour
 toFlavour False = Solid
@@ -396,3 +409,36 @@ drawObject (Vis.VisObject.Points xyzs ps col) =
     GLUT.pointSize $= s'
     GLUT.lighting $= Enabled
 
+drawObject (Vis.VisObject.ObjModel (LoadedObjModel vvec nvec numVerts') col) =
+  GLUT.preservingMatrix $ do
+    setMaterialDiffuse col
+    setColor col
+
+    -- enable vertex/normal arrays
+    -- todo: Should this be done every time?
+    --       Either enable at the start, or push/pop to preserve user attributes
+    GL.clientState GL.VertexArray $= GL.Enabled
+    GL.clientState GL.NormalArray $= GL.Enabled
+
+    -- set the vertex and normal arrays
+    let numVerts :: CInt
+        numVerts = fromIntegral numVerts'
+        va = GL.VertexArrayDescriptor 3 GL.Double 0
+        na = GL.VertexArrayDescriptor 3 GL.Double 0
+    VS.unsafeWith vvec $ \vptr -> GL.arrayPointer GL.VertexArray $= va vptr
+    VS.unsafeWith nvec $ \nptr -> GL.arrayPointer GL.NormalArray $= na nptr
+    -- draw the triangles
+    GL.drawArrays GL.Triangles 0 numVerts
+
+    -- disable vertex/normal arrays
+    GL.clientState GL.VertexArray $= GL.Disabled
+    GL.clientState GL.NormalArray $= GL.Disabled
+
+-- | turn a list of vertex/normal tuples into vertex/normal arrays
+loadObjModel :: F.Foldable f => f (V3 Double, V3 Double) -> LoadedObjModel
+loadObjModel vns = LoadedObjModel (VS.fromList vs) (VS.fromList ns) n
+  where
+    vs = F.concatMap (\(V3 x y z) -> [x,y,z]) vs'
+    ns = F.concatMap (\(V3 x y z) -> [x,y,z]) ns'
+    (vs',ns') = unzip $ F.toList vns
+    n = length vs'

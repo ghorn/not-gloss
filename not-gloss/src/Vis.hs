@@ -15,6 +15,8 @@ module Vis ( Options(..)
            , SpecialKey(..)
            , BitmapFont(..)
            , Flavour(..)
+           , LoadedObjModel
+           , loadObjModel
            , module Vis.GlossColor
            ) where
 
@@ -23,7 +25,7 @@ import Graphics.UI.GLUT ( SpecialKey(..), BitmapFont(..), Flavour(..) )
 import Vis.Vis ( Options(..), visMovie )
 import Vis.Camera ( Camera0(..) )
 import Vis.Interface ( display, animate, simulate, play, animateIO, simulateIO, playIO )
-import Vis.VisObject ( VisObject(..) )
+import Vis.VisObject ( VisObject(..), LoadedObjModel, loadObjModel )
 import Vis.GlossColor
 
 -- | Some reasonable default options.
