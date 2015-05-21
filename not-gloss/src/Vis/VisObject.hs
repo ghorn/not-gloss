@@ -57,8 +57,8 @@ data VisObject a = VisObjects [VisObject a]
                  | Cube a Flavour GlossColor.Color
                  | Sphere a Flavour GlossColor.Color
                  | Ellipsoid (a,a,a) Flavour GlossColor.Color
-                 | Line [V3 a] GlossColor.Color
-                 | Line' [(V3 a,GlossColor.Color)]
+                 | Line (Maybe a) [V3 a] GlossColor.Color
+                 | Line' (Maybe a) [(V3 a,GlossColor.Color)]
                  | Arrow (a,a) (V3 a) GlossColor.Color
                  | Axes (a,a)
                  | Plane (V3 a) GlossColor.Color GlossColor.Color
@@ -285,17 +285,28 @@ drawObject (Cube r flav col) =
     GLUT.renderObject flav (GLUT.Cube (realToFrac r))
 
 -- line
-drawObject (Line path col) =
+drawObject (Line width path col) =
   GLUT.preservingMatrix $ do
     GLUT.lighting $= Disabled
     setColor col
+    lineWidth0 <- GLUT.get GLUT.lineWidth
+    case width of
+     Just w -> GLUT.lineWidth $= realToFrac w
+     Nothing -> return ()
+
     GLUT.renderPrimitive LineStrip $ mapM_ (\(V3 x' y' z') -> GLUT.vertex $ Vertex3 x' y' z') path
+    GLUT.lineWidth $= lineWidth0
     GLUT.lighting $= Enabled
 
 -- line where you set the color at each vertex
-drawObject (Line' pathcols) =
+drawObject (Line' width pathcols) =
   GLUT.preservingMatrix $ do
     GLUT.lighting $= Disabled
+
+    lineWidth0 <- GLUT.get GLUT.lineWidth
+    case width of
+     Just w -> GLUT.lineWidth $= realToFrac w
+     Nothing -> return ()
 
     glBegin gl_LINE_STRIP
     let f (xyz, col) = do
@@ -305,6 +316,7 @@ drawObject (Line' pathcols) =
           glVertex3f x y z
     mapM_ f pathcols
     glEnd
+    GLUT.lineWidth $= lineWidth0
     GLUT.lighting $= Enabled
 
 -- plane
@@ -331,10 +343,12 @@ drawObject (Plane (V3 x y z) col1 col2) =
 
     glDisable gl_BLEND
     let drawWithEps eps' = do
-          mapM_ drawObject $ concat [[ Line [ V3 (-r) y0 eps'
+          mapM_ drawObject $ concat [[ Line Nothing
+                                            [ V3 (-r) y0 eps'
                                             , V3 r    y0 eps'
                                             ] col1
-                                     , Line [ V3 x0 (-r) eps',
+                                     , Line Nothing
+                                            [ V3 x0 (-r) eps',
                                               V3 x0 r    eps'
                                             ] col1
                                      ] | x0 <- [-r,-r+r/n..r], y0 <- [-r,-r+r/n..r]]

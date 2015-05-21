@@ -36,7 +36,7 @@ drawFun (State (x,_) quat trail) = VisObjects $ [axes,box,ellipsoid,sphere, line
       where
         x' = realToFrac $ (x + 1)/0.4*k/5
     boxText = Text3d "trololololo" (V3 0 0 (x-0.2)) TimesRoman24 (makeColor 1 0 0 1)
-    line = Line' $ zip trail (map (\a -> makeColor 1 0 0 a) (linspace 1 0 (length trail))) -- (makeColor 1 0 0 1)
+    line = Line' Nothing $ zip trail (map (\a -> makeColor 1 0 0 a) (linspace 1 0 (length trail))) -- (makeColor 1 0 0 1)
 
 linspace :: Fractional a => a -> a -> Int -> [a]
 linspace x0 xf n = map (\k -> x0 + (xf - x0) * (fromIntegral k) / (fromIntegral n-1)) [0..(n-1)]
