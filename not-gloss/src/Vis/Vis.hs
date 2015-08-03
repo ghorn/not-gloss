@@ -340,7 +340,9 @@ visMovie opts toFilename ts objectsToDraw maybeCursor = do
             bmp = packRGBA32ToBMP32 (fromIntegral width) (fromIntegral height) bs
 
         let filename = toFilename imageNumber
-        printf "writing \"%s\" (%d / %d) ...\n" filename imageNumber n
+            percent :: Double
+            percent = 100 * fromIntegral imageNumber / fromIntegral n
+        printf "writing \"%s\" (%d / %d == %6.2f %%) ...\n" filename imageNumber n percent
         writeBMP filename bmp
 
       drawFun = do
