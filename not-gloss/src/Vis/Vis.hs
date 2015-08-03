@@ -352,7 +352,7 @@ visMovie opts toFilename ts objectsToDraw maybeCursor = do
                   mapM_ (screenShot n cam) (zip objectsToDraw [0..])
                   putStrLn "finished writing files"
                   putStrLn "you might want to try some command like:"
-                  putStrLn "\"ffmpeg -framerate 20 -i data/movie.%03d.bmp -c:v libx264 -r 30 -pix_fmt yuv420p out.mp4\""
+                  putStrLn "\"ffmpeg -framerate 50 -i data/movie.%03d.bmp -c:v libx264 -r 30 -pix_fmt yuv420p out.mp4\""
                   putMVar stateMVar state'
 
                   writeIORef areWeDrawingRef False
