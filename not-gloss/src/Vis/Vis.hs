@@ -46,6 +46,7 @@ data Options =
   , optWindowPosition :: Maybe (Int,Int) -- ^ optional (x,y) window origin in pixels
   , optWindowName :: String -- ^ window name
   , optInitialCamera :: Maybe Camera0 -- ^ initial camera position
+  , optAntiAlias :: Bool
   } deriving Show
 
 myGlInit :: Options -> IO ()
@@ -81,6 +82,14 @@ myGlInit opts = do
   GLUT.materialSpecular Front $= Color4 1 1 1 1
   GLUT.materialShininess Front $= 100
   GLUT.colorMaterial $= Just (Front, Diffuse)
+
+  case optAntiAlias opts of
+    True -> do
+      GLUT.hint GLUT.LineSmooth $= GLUT.Nicest
+      GLUT.hint GLUT.PointSmooth $= GLUT.Nicest
+      GLUT.lineSmooth $= Enabled
+      GLUT.pointSmooth $= Enabled
+    _ -> return ()
 
   glEnable gl_BLEND
   glBlendFunc gl_SRC_ALPHA gl_ONE_MINUS_SRC_ALPHA
