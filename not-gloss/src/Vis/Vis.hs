@@ -46,7 +46,7 @@ data Options =
   , optWindowPosition :: Maybe (Int,Int) -- ^ optional (x,y) window origin in pixels
   , optWindowName :: String -- ^ window name
   , optInitialCamera :: Maybe Camera0 -- ^ initial camera position
-  , optAntiAlias :: Bool
+  , optAntiAlias :: Bool -- ^ Whether to use anti aliasing
   } deriving Show
 
 myGlInit :: Options -> IO ()
