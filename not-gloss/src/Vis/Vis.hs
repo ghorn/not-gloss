@@ -83,13 +83,13 @@ myGlInit opts = do
   GLUT.materialShininess Front $= 100
   GLUT.colorMaterial $= Just (Front, Diffuse)
 
-  case optAntiAlias opts of
+  if optAntiAlias opts then
     True -> do
       GLUT.hint GLUT.LineSmooth $= GLUT.Nicest
       GLUT.hint GLUT.PointSmooth $= GLUT.Nicest
       GLUT.lineSmooth $= Enabled
       GLUT.pointSmooth $= Enabled
-    _ -> return ()
+    else return ()
 
   glEnable gl_BLEND
   glBlendFunc gl_SRC_ALPHA gl_ONE_MINUS_SRC_ALPHA
