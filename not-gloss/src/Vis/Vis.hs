@@ -9,7 +9,7 @@ module Vis.Vis ( Options(..)
 
 import Codec.BMP ( BMP, packRGBA32ToBMP32, writeBMP )
 import Control.Concurrent ( MVar, readMVar, swapMVar, newMVar, takeMVar, putMVar, forkIO, threadDelay )
-import Control.Monad ( unless, forever )
+import Control.Monad ( unless, forever, when )
 import qualified Data.ByteString.Unsafe as BS
 import Data.Maybe ( fromMaybe )
 import Data.IORef ( newIORef, readIORef, writeIORef )
@@ -83,13 +83,11 @@ myGlInit opts = do
   GLUT.materialShininess Front $= 100
   GLUT.colorMaterial $= Just (Front, Diffuse)
 
-  if optAntiAlias opts then
-    True -> do
-      GLUT.hint GLUT.LineSmooth $= GLUT.Nicest
-      GLUT.hint GLUT.PointSmooth $= GLUT.Nicest
-      GLUT.lineSmooth $= Enabled
-      GLUT.pointSmooth $= Enabled
-    else return ()
+  when (optAntiAlias opts) $ do
+    GLUT.hint GLUT.LineSmooth $= GLUT.Nicest
+    GLUT.hint GLUT.PointSmooth $= GLUT.Nicest
+    GLUT.lineSmooth $= Enabled
+    GLUT.pointSmooth $= Enabled
 
   glEnable gl_BLEND
   glBlendFunc gl_SRC_ALPHA gl_ONE_MINUS_SRC_ALPHA
