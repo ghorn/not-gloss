@@ -1,6 +1,7 @@
 {-# OPTIONS_GHC -Wall #-}
 
 module Vis ( Options(..)
+           , Antialiasing(..)
            , Camera0(..)
            , defaultOpts
            , display
@@ -22,7 +23,7 @@ module Vis ( Options(..)
 
 import Graphics.UI.GLUT ( SpecialKey(..), BitmapFont(..), Flavour(..) )
 
-import Vis.Vis ( Options(..), visMovie )
+import Vis.Vis ( Options(..), Antialiasing(..), visMovie )
 import Vis.Camera ( Camera0(..) )
 import Vis.Interface ( display, animate, simulate, play, animateIO, simulateIO, playIO )
 import Vis.VisObject ( VisObject(..), LoadedObjModel, loadObjModel )
@@ -40,5 +41,5 @@ defaultOpts =
   , optWindowPosition = Nothing
   , optWindowName = "not-gloss"
   , optInitialCamera = Nothing
-  , optAntiAlias = False
+  , optAntialiasing = Aliased
   }

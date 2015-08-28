@@ -2,6 +2,7 @@
 {-# Language ScopedTypeVariables #-}
 
 module Vis.Vis ( Options(..)
+               , Antialiasing(..)
                , vis
                , visMovie
                , FullState
@@ -9,7 +10,7 @@ module Vis.Vis ( Options(..)
 
 import Codec.BMP ( BMP, packRGBA32ToBMP32, writeBMP )
 import Control.Concurrent ( MVar, readMVar, swapMVar, newMVar, takeMVar, putMVar, forkIO, threadDelay )
-import Control.Monad ( unless, forever, when )
+import Control.Monad ( unless, forever )
 import qualified Data.ByteString.Unsafe as BS
 import Data.Maybe ( fromMaybe )
 import Data.IORef ( newIORef, readIORef, writeIORef )
@@ -39,6 +40,12 @@ import qualified Vis.GlossColor as GC
 -- | user state and internal states
 type FullState a = (a, Float)
 
+data Antialiasing =
+  Aliased
+  | Smoothed
+  | Multisampled Int
+  deriving (Eq, Show, Ord)
+
 data Options =
   Options
   { optBackgroundColor :: Maybe GC.Color -- ^ optional background color
@@ -46,12 +53,18 @@ data Options =
   , optWindowPosition :: Maybe (Int,Int) -- ^ optional (x,y) window origin in pixels
   , optWindowName :: String -- ^ window name
   , optInitialCamera :: Maybe Camera0 -- ^ initial camera position
-  , optAntiAlias :: Bool -- ^ Whether to use anti aliasing
+  , optAntialiasing :: Antialiasing -- ^ which antialiasing strategy to use
   } deriving Show
 
 myGlInit :: Options -> IO ()
 myGlInit opts = do
-  GLUT.initialDisplayMode $= [ DoubleBuffered, RGBAMode, WithDepthBuffer ]
+  let displayMode = [ DoubleBuffered, RGBAMode, WithDepthBuffer ] ++
+        case optAntialiasing opts of
+          Multisampled numSamples -> [ GLUT.Multisampling
+                                     , GLUT.WithSamplesPerPixel numSamples
+                                     ]
+          _ -> []
+  GLUT.initialDisplayMode $= displayMode
 
   Size x y <- GLUT.get GLUT.screenSize
   let intScale d i = round $ d*(realToFrac i :: Double)
@@ -83,11 +96,21 @@ myGlInit opts = do
   GLUT.materialShininess Front $= 100
   GLUT.colorMaterial $= Just (Front, Diffuse)
 
-  when (optAntiAlias opts) $ do
-    GLUT.hint GLUT.LineSmooth $= GLUT.Nicest
-    GLUT.hint GLUT.PointSmooth $= GLUT.Nicest
-    GLUT.lineSmooth $= Enabled
-    GLUT.pointSmooth $= Enabled
+  case optAntialiasing opts of
+    Aliased -> do
+      GLUT.lineSmooth $= Disabled
+      GLUT.pointSmooth $= Disabled
+      GLUT.multisample $= Disabled
+    Smoothed -> do
+      GLUT.hint GLUT.LineSmooth $= GLUT.Nicest
+      GLUT.hint GLUT.PolygonSmooth $= GLUT.Nicest
+      GLUT.lineSmooth $= Enabled
+      GLUT.pointSmooth $= Enabled
+      GLUT.multisample $= Disabled
+    Multisampled _ -> do
+      GLUT.lineSmooth $= Disabled
+      GLUT.pointSmooth $= Disabled
+      GLUT.multisample $= Enabled
 
   glEnable gl_BLEND
   glBlendFunc gl_SRC_ALPHA gl_ONE_MINUS_SRC_ALPHA
