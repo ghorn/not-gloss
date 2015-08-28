@@ -40,4 +40,5 @@ defaultOpts =
   , optWindowPosition = Nothing
   , optWindowName = "not-gloss"
   , optInitialCamera = Nothing
+  , optAntiAlias = False
   }

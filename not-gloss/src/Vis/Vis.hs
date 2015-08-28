@@ -9,7 +9,7 @@ module Vis.Vis ( Options(..)
 
 import Codec.BMP ( BMP, packRGBA32ToBMP32, writeBMP )
 import Control.Concurrent ( MVar, readMVar, swapMVar, newMVar, takeMVar, putMVar, forkIO, threadDelay )
-import Control.Monad ( unless, forever )
+import Control.Monad ( unless, forever, when )
 import qualified Data.ByteString.Unsafe as BS
 import Data.Maybe ( fromMaybe )
 import Data.IORef ( newIORef, readIORef, writeIORef )
@@ -46,6 +46,7 @@ data Options =
   , optWindowPosition :: Maybe (Int,Int) -- ^ optional (x,y) window origin in pixels
   , optWindowName :: String -- ^ window name
   , optInitialCamera :: Maybe Camera0 -- ^ initial camera position
+  , optAntiAlias :: Bool -- ^ Whether to use anti aliasing
   } deriving Show
 
 myGlInit :: Options -> IO ()
@@ -81,6 +82,12 @@ myGlInit opts = do
   GLUT.materialSpecular Front $= Color4 1 1 1 1
   GLUT.materialShininess Front $= 100
   GLUT.colorMaterial $= Just (Front, Diffuse)
+
+  when (optAntiAlias opts) $ do
+    GLUT.hint GLUT.LineSmooth $= GLUT.Nicest
+    GLUT.hint GLUT.PointSmooth $= GLUT.Nicest
+    GLUT.lineSmooth $= Enabled
+    GLUT.pointSmooth $= Enabled
 
   glEnable gl_BLEND
   glBlendFunc gl_SRC_ALPHA gl_ONE_MINUS_SRC_ALPHA
