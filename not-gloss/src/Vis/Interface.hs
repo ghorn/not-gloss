@@ -26,14 +26,14 @@ display opts visobjects = animate opts (\_ -> visobjects)
 ---- | display an animation
 animate :: Real b =>
            Options -- ^ user options
-           -> (Float -> VisObject b) -- ^ draw function
+           -> (Float -> VisObject b) -- ^ draw function (takes time since start as input)
            -> IO ()
 animate opts userDrawFun = animateIO opts (return . userDrawFun)
 
 -- | display an animation impurely
 animateIO :: Real b =>
              Options -- ^ user options
-             -> (Float -> IO (VisObject b)) -- ^ draw function
+             -> (Float -> IO (VisObject b)) -- ^ draw function (takes time since start as input)
              -> IO ()
 animateIO opts userDrawFun =
   vis opts ts (userState0, cameraState0) simFun drawFun setCameraFun (Just kmCallback) (Just motionCallback) Nothing
@@ -57,7 +57,7 @@ simulate :: Real b =>
             -> Double -- ^ sample rate
             -> world -- ^ initial state
             -> (world -> VisObject b) -- ^ draw function
-            -> (Float -> world -> world) -- ^ state propogation function (takes current time and state as inputs)
+            -> (Float -> world -> world) -- ^ state propogation function (takes time since start and state as inputs)
             -> IO ()
 simulate opts ts state0 userDrawFun userSimFun =
   simulateIO opts ts state0 (return . userDrawFun) (\t -> return . (userSimFun t))
@@ -68,7 +68,7 @@ simulateIO :: Real b =>
               -> Double -- ^ sample rate    
               -> world -- ^ initial state
               -> (world -> IO (VisObject b)) -- ^ draw function
-              -> (Float -> world -> IO world) -- ^ state propogation function (takes current time and state as inputs)
+              -> (Float -> world -> IO world) -- ^ state propogation function (takes time since start and state as inputs)
               -> IO ()
 simulateIO opts ts userState0 userDrawFun userSimFun =
   vis opts ts (userState0, cameraState0) simFun drawFun setCameraFun (Just kmCallback) (Just motionCallback) Nothing
@@ -92,7 +92,7 @@ play :: Real b =>
         -> Double -- ^ sample time
         -> world -- ^ initial state
         -> (world -> (VisObject b, Maybe Cursor)) -- ^ draw function, can give a different cursor
-        -> (Float -> world -> world) -- ^ state propogation function (takes current time and state as inputs)
+        -> (Float -> world -> world) -- ^ state propogation function (takes time since start and state as inputs)
         -> (world -> IO ()) -- ^ set where camera looks
         -> Maybe (world -> Key -> KeyState -> Modifiers -> Position -> world) -- ^ keyboard/mouse press callback
         -> Maybe (world -> Position -> world) -- ^ mouse drag callback
@@ -111,7 +111,7 @@ playIO :: Real b =>
           -> Double -- ^ sample time
           -> world -- ^ initial state
           -> (world -> IO (VisObject b, Maybe Cursor)) -- ^ draw function, can give a different cursor
-          -> (Float -> world -> IO world) -- ^ state propogation function (takes current time and state as inputs)
+          -> (Float -> world -> IO world) -- ^ state propogation function (takes time since start and state as inputs)
           -> (world -> IO ()) -- ^ set where camera looks
           -> Maybe (world -> Key -> KeyState -> Modifiers -> Position -> world) -- ^ keyboard/mouse press callback
           -> Maybe (world -> Position -> world) -- ^ mouse drag callback
