@@ -103,7 +103,7 @@ myGlInit opts = do
       GLUT.multisample $= Disabled
     Smoothed -> do
       GLUT.hint GLUT.LineSmooth $= GLUT.Nicest
-      GLUT.hint GLUT.PolygonSmooth $= GLUT.Nicest
+      GLUT.hint GLUT.PointSmooth $= GLUT.Nicest
       GLUT.lineSmooth $= Enabled
       GLUT.pointSmooth $= Enabled
       GLUT.multisample $= Disabled
