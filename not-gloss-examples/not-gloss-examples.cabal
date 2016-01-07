@@ -1,5 +1,5 @@
 name:                not-gloss-examples
-version:             0.5.1
+version:             0.5.1.1
 stability:           Experimental
 synopsis:            examples for not-gloss
 license:             BSD3
@@ -15,28 +15,28 @@ extra-source-files:  changelog.txt
 
 executable           not-gloss-display
   main-is:           src/Display.hs
-  build-depends:     not-gloss >= 0.7.4,
+  build-depends:     not-gloss >= 0.7.6.2,
                      linear >= 1.3.1,
                      base >= 4.5 && < 5
   ghc-options:       -threaded -O2
 
 executable           not-gloss-animate
   main-is:           src/Animate.hs
-  build-depends:     not-gloss >= 0.7.4,
+  build-depends:     not-gloss >= 0.7.6.2,
                      linear >= 1.3.1,
                      base >= 4.5 && < 5
   ghc-options:       -threaded -O2
 
 executable           not-gloss-simulate
   main-is:           src/Simulate.hs
-  build-depends:     not-gloss >= 0.7.4,
+  build-depends:     not-gloss >= 0.7.6.2,
                      linear >= 1.3.1,
                      base >= 4.5 && < 5
   ghc-options:       -threaded -O2
 
 executable           not-gloss-game
   main-is:           src/Play.hs
-  build-depends:     not-gloss >= 0.7.4,
+  build-depends:     not-gloss >= 0.7.6.2,
                      spatial-math >= 0.2.0 && < 0.3,
                      linear >= 1.3.1,
                      GLUT,
