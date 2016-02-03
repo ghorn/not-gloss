@@ -28,8 +28,7 @@ import Graphics.UI.GLUT ( Capability(..), ClearBuffer(..), Color4(..), ColorMate
                         , DisplayCallback, ReshapeCallback
                         , ($=)
                         )
-import Graphics.Rendering.OpenGL.Raw ( GLubyte, glEnable, glBlendFunc
-                                     , gl_BLEND, gl_SRC_ALPHA, gl_ONE_MINUS_SRC_ALPHA )
+import Graphics.GL
 import Text.Printf ( printf )
 import System.Exit ( exitSuccess )
 
@@ -112,8 +111,8 @@ myGlInit opts = do
       GLUT.pointSmooth $= Disabled
       GLUT.multisample $= Enabled
 
-  glEnable gl_BLEND
-  glBlendFunc gl_SRC_ALPHA gl_ONE_MINUS_SRC_ALPHA
+  glEnable GL_BLEND
+  glBlendFunc GL_SRC_ALPHA GL_ONE_MINUS_SRC_ALPHA
 
 drawScene :: MVar (FullState a) -> MVar Bool -> IO () -> (FullState a -> IO ()) -> DisplayCallback
 drawScene stateMVar visReadyMVar setCameraFun userDrawFun = do

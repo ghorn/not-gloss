@@ -22,10 +22,9 @@ import qualified Data.Serialize as S
 import qualified Data.Binary as B
 import Data.Vector.Cereal ()
 import Data.Vector.Binary ()
-import Graphics.Rendering.OpenGL.Raw
+import Graphics.GL
 import qualified Graphics.Rendering.OpenGL as GL
 import qualified Graphics.UI.GLUT as GLUT
-import Foreign.C.Types ( CFloat(..), CInt(..) )
 import Graphics.UI.GLUT ( BitmapFont(..), Capability(..), Color4(..), Face(..)
                         , Flavour(..), MatrixMode(..), PrimitiveMode(..), Size(..)
                         , Vertex3(..), Vector3(..)
@@ -132,19 +131,6 @@ instance B.Binary (GlossColor.Color) where
   get = fmap toColor B.get
 
 
-fromCFloat :: CFloat -> Float
-fromCFloat (CFloat x) = x
-
-toCFloat :: Float -> CFloat
-toCFloat = CFloat
-
-instance S.Serialize (GLfloat) where
-  put = S.put . fromCFloat
-  get = fmap toCFloat S.get
-instance B.Binary (GLfloat) where
-  put = B.put . fromCFloat
-  get = fmap toCFloat B.get
-
 instance S.Serialize a => S.Serialize (VisObject a)
 instance B.Binary a => B.Binary (VisObject a)
 
@@ -201,7 +187,7 @@ drawObject (Triangle (V3 x0 y0 z0) (V3 x1 y1 z1) (V3 x2 y2 z2) col) =
   GLUT.preservingMatrix $ do
     setMaterialDiffuse col
     setColor col
-    glBegin gl_TRIANGLES
+    glBegin GL_TRIANGLES
     glVertex3d x0 y0 z0
     glVertex3d x1 y1 z1
     glVertex3d x2 y2 z2
@@ -212,7 +198,7 @@ drawObject (Quad (V3 x0 y0 z0) (V3 x1 y1 z1) (V3 x2 y2 z2) (V3 x3 y3 z3) col) =
   GLUT.preservingMatrix $ do
     GLUT.lighting $= Disabled
     setColor col
-    glBegin gl_QUADS
+    glBegin GL_QUADS
     glVertex3d x0 y0 z0
     glVertex3d x1 y1 z1
     glVertex3d x2 y2 z2
@@ -238,13 +224,13 @@ drawObject (Cylinder (height,radius) col) =
             angles = reverse $ map ((angle*) . fromIntegral) [0..(nslices+1)]
 
     -- Cover the base and top
-    glBegin gl_TRIANGLE_FAN
+    glBegin GL_TRIANGLE_FAN
     glNormal3d 0 0 (-1)
     glVertex3d 0 0 0
     mapM_ (\(s,c) -> glVertex3d (c*radius) (s*radius) 0) sinCosTable
     glEnd
 
-    glBegin gl_TRIANGLE_FAN
+    glBegin GL_TRIANGLE_FAN
     glNormal3d 0 0 1
     glVertex3d 0 0 height
     mapM_ (\(s,c) -> glVertex3d (c*radius) (s*radius) height) (reverse sinCosTable)
@@ -259,7 +245,7 @@ drawObject (Cylinder (height,radius) col) =
           glVertex3d (c*radius) (s*radius) z1
 
         drawSlices (z0,z1) = do
-          glBegin gl_QUAD_STRIP
+          glBegin GL_QUAD_STRIP
           mapM_ (drawSlice z0 z1) sinCosTable
           glEnd
 
@@ -308,7 +294,7 @@ drawObject (Line' width pathcols) =
      Just w -> GLUT.lineWidth $= realToFrac w
      Nothing -> return ()
 
-    glBegin gl_LINE_STRIP
+    glBegin GL_LINE_STRIP
     let f (xyz, col) = do
           let V3 x y z = fmap realToFrac xyz
           setMaterialDiffuse col
@@ -331,7 +317,7 @@ drawObject (Plane (V3 x y z) col1 col2) =
         eps = 0.01
     GLUT.rotate ((acos z')*180/pi :: GLdouble) (Vector3 (-y') x' 0)
 
-    glBegin gl_QUADS
+    glBegin GL_QUADS
     setColor col2
 
     let r' = realToFrac r
@@ -341,7 +327,7 @@ drawObject (Plane (V3 x y z) col1 col2) =
     glVertex3f   r'   (-r')  0
     glEnd
 
-    glDisable gl_BLEND
+    glDisable GL_BLEND
     let drawWithEps eps' = do
           mapM_ drawObject $ concat [[ Line Nothing
                                             [ V3 (-r) y0 eps'
@@ -355,7 +341,7 @@ drawObject (Plane (V3 x y z) col1 col2) =
     drawWithEps eps
     drawWithEps (-eps)
 
-    glEnable gl_BLEND
+    glEnable GL_BLEND
 
 
 -- arrow
@@ -423,7 +409,7 @@ drawObject (Vis.VisObject.Points xyzs ps col) =
     GLUT.pointSize $= s'
     GLUT.lighting $= Enabled
 
-drawObject (Vis.VisObject.ObjModel (LoadedObjModel vvec nvec numVerts') col) =
+drawObject (Vis.VisObject.ObjModel (LoadedObjModel vvec nvec numVerts) col) =
   GLUT.preservingMatrix $ do
     setMaterialDiffuse col
     setColor col
@@ -435,14 +421,12 @@ drawObject (Vis.VisObject.ObjModel (LoadedObjModel vvec nvec numVerts') col) =
     GL.clientState GL.NormalArray $= GL.Enabled
 
     -- set the vertex and normal arrays
-    let numVerts :: CInt
-        numVerts = fromIntegral numVerts'
-        va = GL.VertexArrayDescriptor 3 GL.Double 0
+    let va = GL.VertexArrayDescriptor 3 GL.Double 0
         na = GL.VertexArrayDescriptor 3 GL.Double 0
     VS.unsafeWith vvec $ \vptr -> GL.arrayPointer GL.VertexArray $= va vptr
     VS.unsafeWith nvec $ \nptr -> GL.arrayPointer GL.NormalArray $= na nptr
     -- draw the triangles
-    GL.drawArrays GL.Triangles 0 numVerts
+    GL.drawArrays GL.Triangles 0 (fromIntegral numVerts)
 
     -- disable vertex/normal arrays
     GL.clientState GL.VertexArray $= GL.Disabled

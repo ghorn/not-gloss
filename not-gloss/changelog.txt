@@ -1,3 +1,6 @@
+0.7.6.3:
+- support OpenGL 3
+
 0.7.5.0:
 - add z translation with middle mouse button
 
