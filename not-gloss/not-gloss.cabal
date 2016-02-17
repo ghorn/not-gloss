@@ -45,7 +45,7 @@ library
                        vector,
                        cereal,
                        binary,
-                       vector-binary-instances,
+                       vector-binary-instances == 0.2.1.0,
                        bytestring,
                        bmp
 
