@@ -4,7 +4,6 @@
 sudo: false
 
 env:
- - GHCVER=7.6.3
  - GHCVER=7.8.4 # see note about Alex/Happy
  - GHCVER=7.10.3
 
@@ -13,7 +12,6 @@ addons:
     sources:
     - hvr-ghc
     packages:
-    - ghc-7.6.3
     - ghc-7.8.4
     - ghc-7.10.3
     - cabal-install-1.22
