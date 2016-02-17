@@ -157,13 +157,19 @@ drawObject (Trans (V3 x y z) visobj) =
     GLUT.translate (Vector3 x y z :: Vector3 GLdouble)
     drawObject visobj
 
-drawObject (RotQuat (Quaternion q0 (V3 q1 q2 q3)) visobj) =
-  GLUT.preservingMatrix $ do
-    GLUT.rotate (2 * acos q0 *180/pi :: GLdouble) (Vector3 q1 q2 q3)
-    drawObject visobj
+drawObject (RotQuat quat visobj) = drawObject (RotDcm (dcmOfQuat quat) visobj)
 
-drawObject (RotDcm dcm visobject) =
-  drawObject (RotQuat (quatOfDcm dcm) visobject)
+drawObject (RotDcm (V3 (V3 m00 m01 m02) (V3 m10 m11 m12) (V3 m20 m21 m22)) visobject) =
+  GLUT.preservingMatrix $ do
+    mat <- GLUT.newMatrix GLUT.ColumnMajor
+      [ m00, m01, m02, 0
+      , m10, m11, m12, 0
+      , m20, m21, m22, 0
+      ,   0,   0,   0, 1
+      ]
+      :: IO (GLUT.GLmatrix GLdouble)
+    GLUT.multMatrix mat
+    drawObject visobject
 
 drawObject (RotEulerRad euler visobj) =
   drawObject $ RotEulerDeg (fmap ((180/pi)*) euler) visobj
