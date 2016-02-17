@@ -5,6 +5,7 @@ module Vis.Vis ( Options(..)
                , Antialiasing(..)
                , vis
                , visMovie
+               , visMovieImmediately
                , FullState
                ) where
 
@@ -296,7 +297,10 @@ movieSimThread objects0 stateMVar visReadyMVar ts = do
       -- need to sleep longer
       else threadDelay usRemaining
 
-
+-- | Make a series of images, one from each 'VisObject'.
+-- When 'visMovie' is executed a window pops up and loops the animation
+-- until you are happy with the camera angle.
+-- Hit spacebar and the images will be created and saved to disk.
 visMovie
   :: forall b
      . Real b
@@ -306,7 +310,33 @@ visMovie
      -> [VisObject b] -- ^ movie to draw
      -> Maybe Cursor -- ^ optional cursor
      -> IO ()
-visMovie opts toFilename ts objectsToDraw maybeCursor = do
+visMovie = visMovie' False
+
+-- | Make a series of images, one from each 'VisObject'.
+-- When 'visMovieImmediately' is executed a window is opened and without
+-- waiting the images are created and saved to disk.
+visMovieImmediately
+  :: forall b
+     . Real b
+     => Options -- ^ user options
+     -> (Int -> FilePath) -- ^ where to write the bitmaps
+     -> Double -- ^ sample time
+     -> [VisObject b] -- ^ movie to draw
+     -> Maybe Cursor -- ^ optional cursor
+     -> IO ()
+visMovieImmediately = visMovie' True
+
+visMovie'
+  :: forall b
+     . Real b
+     => Bool -- ^ start immediately
+     -> Options -- ^ user options
+     -> (Int -> FilePath) -- ^ where to write the bitmaps
+     -> Double -- ^ sample time
+     -> [VisObject b] -- ^ movie to draw
+     -> Maybe Cursor -- ^ optional cursor
+     -> IO ()
+visMovie' startImmediately opts toFilename ts objectsToDraw maybeCursor = do
   -- init glut/scene
   _ <- GLUT.getArgsAndInitialize
 
@@ -321,7 +351,7 @@ visMovie opts toFilename ts objectsToDraw maybeCursor = do
   -- create internal state
   areWeDrawingRef <- newIORef False
   stateMVar <- newMVar (objectsToDraw, cameraState0)
-  visReadyMVar <- newMVar False
+  visReadyMVar <- newMVar startImmediately
 
   -- start sim thread
   _ <- forkIO $ movieSimThread objectsToDraw stateMVar visReadyMVar ts
