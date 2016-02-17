@@ -14,14 +14,14 @@ module Vis.VisObject ( VisObject(..)
 import GHC.Generics ( Generic )
 
 import Control.Monad ( when )
+import qualified Data.Binary as B
 import qualified Data.Foldable as F
 import Data.Maybe ( fromJust, isJust )
-import Data.Word ( Word8 )
-import qualified Data.Vector.Storable as VS
 import qualified Data.Serialize as S
-import qualified Data.Binary as B
-import Data.Vector.Cereal ()
 import Data.Vector.Binary ()
+import Data.Vector.Cereal ()
+import qualified Data.Vector.Storable as VS
+import Data.Word ( Word8 )
 import Graphics.GL
 import qualified Graphics.Rendering.OpenGL as GL
 import qualified Graphics.UI.GLUT as GLUT
