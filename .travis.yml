@@ -1,14 +1,27 @@
 # from https://github.com/hvr/multi-ghc-travis
 
+# explicitly request container-based infrastructure
+sudo: false
+
 env:
  - GHCVER=7.6.3
  - GHCVER=7.8.4 # see note about Alex/Happy
- - GHCVER=7.10.2
+ - GHCVER=7.10.3
+
+addons:
+  apt:
+    sources:
+    - hvr-ghc
+    packages:
+    - ghc-7.6.3
+    - ghc-7.8.4
+    - ghc-7.10.3
+    - cabal-install-1.22
+    - libgsl0-dev
+    - liblapack-dev
+    - freeglut3-dev
 
 before_install:
- - travis_retry sudo add-apt-repository -y ppa:hvr/ghc
- - travis_retry sudo apt-get update
- - travis_retry sudo apt-get install cabal-install-1.22 ghc-$GHCVER libgsl0-dev liblapack-dev freeglut3-dev
  - export PATH=/opt/ghc/$GHCVER/bin:/opt/cabal/1.22/bin:$PATH
 
 install:
