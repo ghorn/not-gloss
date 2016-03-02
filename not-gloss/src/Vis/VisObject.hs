@@ -6,7 +6,7 @@
 
 module Vis.VisObject ( VisObject(..)
                      , drawObjects
-                     , LoadedObjModel
+                     , LoadedObjModel(..)
                      , loadObjModel
                      , setPerspectiveMode
                      ) where
