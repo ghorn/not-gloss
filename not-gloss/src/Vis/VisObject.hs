@@ -17,9 +17,7 @@ import Control.Monad ( when )
 import qualified Data.Binary as B
 import qualified Data.Foldable as F
 import Data.Maybe ( fromJust, isJust )
-import qualified Data.Serialize as S
 import Data.Vector.Binary ()
-import Data.Vector.Cereal ()
 import qualified Data.Vector.Storable as VS
 import Data.Word ( Word8 )
 import Graphics.GL
@@ -71,7 +69,6 @@ data VisObject a = VisObjects [VisObject a]
 
 data LoadedObjModel = LoadedObjModel (VS.Vector Double) (VS.Vector Double) Int deriving (Generic)
 
-instance S.Serialize LoadedObjModel
 instance B.Binary LoadedObjModel
 
 toFlavour :: Bool -> Flavour
@@ -82,9 +79,6 @@ fromFlavour :: Flavour -> Bool
 fromFlavour Solid = False
 fromFlavour Wireframe = True
 
-instance S.Serialize Flavour where
-  put = S.put . fromFlavour
-  get = fmap toFlavour S.get
 instance B.Binary Flavour where
   put = B.put . fromFlavour
   get = fmap toFlavour B.get
@@ -109,9 +103,6 @@ toBitmapFont 5 = Helvetica12
 toBitmapFont 6 = Helvetica18
 toBitmapFont k = error $ "deserializing BitmapFont got bad value (" ++ show k ++ ")"
 
-instance S.Serialize BitmapFont where
-  put = S.put . fromBitmapFont
-  get = fmap toBitmapFont S.get
 instance B.Binary BitmapFont where
   put = B.put . fromBitmapFont
   get = fmap toBitmapFont B.get
@@ -123,15 +114,11 @@ fromColor = GlossColor.rgbaOfColor
 toColor :: (Float,Float,Float,Float) -> GlossColor.Color
 toColor (r,g,b,a) = GlossColor.makeColor r g b a
 
-instance S.Serialize (GlossColor.Color) where
-  put = S.put . fromColor
-  get = fmap toColor S.get
 instance B.Binary (GlossColor.Color) where
   put = B.put . fromColor
   get = fmap toColor B.get
 
 
-instance S.Serialize a => S.Serialize (VisObject a)
 instance B.Binary a => B.Binary (VisObject a)
 
 setPerspectiveMode :: IO ()
