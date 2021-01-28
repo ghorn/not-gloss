@@ -348,7 +348,9 @@ drawObject (Arrow (size, aspectRatio) (V3 x y z) col) =
         coneHeight = 2*coneRadius
 
         rotAngle = acos(z/(sqrt(x*x + y*y + z*z) + 1e-15))*180/pi :: GLdouble
-        rotAxis = Vector3 (-y) x 0
+        rotAxis = if z < 0 && sqrt(x*x + y*y) / abs z < 1e-15
+                  then Vector3 0 1 0
+                  else Vector3 (-y) x 0
 
     GLUT.rotate rotAngle rotAxis
 
