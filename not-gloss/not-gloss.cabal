@@ -1,5 +1,5 @@
 name:                not-gloss
-version:             0.7.7.0
+version:             0.7.7.1
 stability:           Experimental
 synopsis:            Painless 3D graphics, no affiliation with gloss
 description:{
@@ -41,7 +41,7 @@ library
                        time >= 1.4.0,
                        OpenGLRaw >= 3.1.0.0,
                        OpenGL >= 3.0.0.1,
-                       spatial-math >= 0.2.1.2,
+                       spatial-math >= 0.5.0.2,
                        vector,
                        binary,
                        vector-binary-instances > 0.2.1.0,

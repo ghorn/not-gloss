@@ -29,7 +29,8 @@ import Graphics.UI.GLUT ( BitmapFont(..), Capability(..), Color4(..), Face(..)
                         , ($=)
                         )
 
-import SpatialMath
+import SpatialMath (Euler(..))
+import SpatialMath.Untyped
 
 import qualified Vis.GlossColor as GlossColor
 
