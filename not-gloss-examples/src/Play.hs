@@ -13,7 +13,8 @@ import Graphics.UI.GLUT ( Cursor(..), Key(..), KeyState(..), Modifiers(..), Posi
                         )
 import qualified Graphics.UI.GLUT as GLUT
 
-import SpatialMath ( Euler(..), rotateXyzAboutZ, rotVecByEulerB2A )
+import SpatialMath ( Euler(..) )
+import SpatialMath.Untyped ( rotateXyzAboutZ, rotVecByEulerB2A )
 import Vis
 
 import Control.Monad ( when )

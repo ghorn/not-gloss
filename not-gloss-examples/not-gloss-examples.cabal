@@ -1,5 +1,5 @@
 name:                not-gloss-examples
-version:             0.5.1.1
+version:             0.5.1.2
 stability:           Experimental
 synopsis:            examples for not-gloss
 license:             BSD3
@@ -37,7 +37,7 @@ executable           not-gloss-simulate
 executable           not-gloss-game
   main-is:           src/Play.hs
   build-depends:     not-gloss >= 0.7.6.2,
-                     spatial-math >= 0.2.0 && < 0.3,
+                     spatial-math >= 0.5.0.2,
                      linear >= 1.3.1,
                      GLUT,
                      containers,
